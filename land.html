@@ -1,0 +1,288 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Remote Desktop - Connect</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #1e3c72, #2a5298);
+            color: white;
+            height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .container {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            border-radius: 20px;
+            padding: 40px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+            max-width: 400px;
+            width: 100%;
+            text-align: center;
+        }
+
+        h1 {
+            margin-bottom: 10px;
+            font-size: 2.5em;
+            font-weight: 300;
+        }
+
+        .subtitle {
+            margin-bottom: 30px;
+            opacity: 0.8;
+            font-size: 1.1em;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+            text-align: left;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 500;
+        }
+
+        input[type="text"] {
+            width: 100%;
+            padding: 15px;
+            border: none;
+            border-radius: 10px;
+            background: rgba(255, 255, 255, 0.2);
+            color: white;
+            font-size: 16px;
+            backdrop-filter: blur(5px);
+            transition: all 0.3s ease;
+        }
+
+        input[type="text"]:focus {
+            outline: none;
+            background: rgba(255, 255, 255, 0.25);
+            transform: translateY(-2px);
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
+        }
+
+        input[type="text"]::placeholder {
+            color: rgba(255, 255, 255, 0.6);
+        }
+
+        .connect-btn {
+            width: 100%;
+            padding: 15px;
+            border: none;
+            border-radius: 10px;
+            background: linear-gradient(45deg, #ff6b6b, #feca57);
+            color: white;
+            font-size: 18px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .connect-btn:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 10px 30px rgba(255, 107, 107, 0.4);
+        }
+
+        .connect-btn:active {
+            transform: translateY(-1px);
+        }
+
+        .connect-btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .error-message {
+            background: rgba(255, 0, 0, 0.2);
+            border: 1px solid rgba(255, 0, 0, 0.5);
+            border-radius: 10px;
+            padding: 15px;
+            margin-top: 20px;
+            color: #ffcccc;
+            display: none;
+        }
+
+        .loading {
+            display: none;
+            margin-top: 20px;
+        }
+
+        .loading-spinner {
+            width: 30px;
+            height: 30px;
+            border: 3px solid rgba(255, 255, 255, 0.3);
+            border-radius: 50%;
+            border-top-color: white;
+            animation: spin 1s ease-in-out infinite;
+            margin: 0 auto;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        .info-box {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 10px;
+            padding: 15px;
+            margin-top: 20px;
+            font-size: 0.9em;
+            opacity: 0.8;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Remote Desktop</h1>
+        <p class="subtitle">Connect to your remote machine</p>
+        
+        <form id="connectForm">
+            <div class="form-group">
+                <label for="uuid">Client UUID</label>
+                <input 
+                    type="text" 
+                    id="uuid" 
+                    name="uuid" 
+                    placeholder="Enter client UUID..."
+                    required
+                    autocomplete="off"
+                >
+            </div>
+            
+            <button type="submit" class="connect-btn" id="connectBtn">
+                Connect
+            </button>
+        </form>
+        
+        <div class="loading" id="loading">
+            <div class="loading-spinner"></div>
+            <p>Connecting...</p>
+        </div>
+        
+        <div class="error-message" id="errorMessage"></div>
+        
+        <div class="info-box">
+            <strong>Instructions:</strong><br>
+            Enter the UUID from your client machine to establish a connection.
+            The client must be running and authorized to connect.
+        </div>
+    </div>
+
+    <script>
+        class RemoteDesktopConnector {
+            constructor() {
+                this.form = document.getElementById('connectForm');
+                this.uuidInput = document.getElementById('uuid');
+                this.connectBtn = document.getElementById('connectBtn');
+                this.loading = document.getElementById('loading');
+                this.errorMessage = document.getElementById('errorMessage');
+                
+                this.setupEventListeners();
+            }
+
+            setupEventListeners() {
+                this.form.addEventListener('submit', (e) => this.handleConnect(e));
+                
+                // Auto-focus UUID input
+                this.uuidInput.focus();
+                
+                // Clear error on input
+                this.uuidInput.addEventListener('input', () => {
+                    this.hideError();
+                });
+            }
+
+            async handleConnect(event) {
+                event.preventDefault();
+                
+                const uuid = this.uuidInput.value.trim();
+                if (!uuid) {
+                    this.showError('Please enter a valid UUID');
+                    return;
+                }
+
+                this.showLoading();
+                
+                try {
+                    // Validate UUID format (basic check)
+                    if (!this.isValidUUID(uuid)) {
+                        throw new Error('Invalid UUID format');
+                    }
+
+                    // Check if client is connected
+                    const isConnected = await this.checkClientConnection(uuid);
+                    if (!isConnected) {
+                        throw new Error('Client is not connected. Please ensure the client is running and authorized.');
+                    }
+
+                    // Store UUID and redirect to view page
+                    sessionStorage.setItem('clientUUID', uuid);
+                    window.location.href = '/view.html';
+                    
+                } catch (error) {
+                    this.hideLoading();
+                    this.showError(error.message);
+                }
+            }
+
+            isValidUUID(uuid) {
+                // Basic UUID validation - allows various formats
+                const uuidRegex = /^[0-9a-f]{8}-?[0-9a-f]{4}-?[0-9a-f]{4}-?[0-9a-f]{4}-?[0-9a-f]{12}$/i;
+                return uuidRegex.test(uuid.replace(/\s/g, ''));
+            }
+
+            async checkClientConnection(uuid) {
+                try {
+                    const response = await fetch(`/api/status/${encodeURIComponent(uuid)}`);
+                    const status = await response.json();
+                    return status.client_connected;
+                } catch (error) {
+                    console.error('Error checking client connection:', error);
+                    return false;
+                }
+            }
+
+            showLoading() {
+                this.connectBtn.disabled = true;
+                this.loading.style.display = 'block';
+                this.hideError();
+            }
+
+            hideLoading() {
+                this.connectBtn.disabled = false;
+                this.loading.style.display = 'none';
+            }
+
+            showError(message) {
+                this.errorMessage.textContent = message;
+                this.errorMessage.style.display = 'block';
+            }
+
+            hideError() {
+                this.errorMessage.style.display = 'none';
+            }
+        }
+
+        // Initialize the connector when page loads
+        document.addEventListener('DOMContentLoaded', () => {
+            new RemoteDesktopConnector();
+        });
+    </script>
+</body>
+</html>

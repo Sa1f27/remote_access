@@ -1,0 +1,8 @@
+aiohttp
+aiofiles
+websockets
+pyaudio
+mss
+Pillow
+pynput
+numpy

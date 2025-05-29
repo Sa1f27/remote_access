@@ -1,0 +1,365 @@
+2025-05-29 14:42:25,988 - INFO - CLIENT CONNECT - UUID: 34383350-3131-4753-4835-30354B4B5334, IP: 192.168.48.201
+2025-05-29 14:42:41,278 - INFO - CLIENT DISCONNECT - UUID: 34383350-3131-4753-4835-30354B4B5334, IP: 192.168.48.201
+2025-05-29 14:42:41,279 - INFO - 192.168.48.201 [29/May/2025:14:42:25 +0530] "GET /ws HTTP/1.1" 101 0 "-" "Python/3.12 websockets/15.0.1"
+2025-05-29 14:49:57,522 - INFO - 192.168.48.201 [29/May/2025:14:49:57 +0530] "GET / HTTP/1.1" 200 8846 "-" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/136.0.0.0 Safari/537.36"
+2025-05-29 14:49:57,627 - INFO - 192.168.48.201 [29/May/2025:14:49:57 +0530] "GET /favicon.ico HTTP/1.1" 404 172 "https://192.168.48.201:5444/" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/136.0.0.0 Safari/537.36"
+2025-05-29 14:58:13,195 - INFO - CLIENT CONNECT - UUID: 2066740F-8905-8D43-B5D1-56C42AE77D82, IP: 192.168.48.25
+2025-05-29 14:58:28,898 - INFO - 192.168.48.201 [29/May/2025:14:58:28 +0530] "GET / HTTP/1.1" 200 8846 "-" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/136.0.0.0 Safari/537.36"
+2025-05-29 14:58:28,964 - INFO - 192.168.48.201 [29/May/2025:14:58:28 +0530] "GET /favicon.ico HTTP/1.1" 404 172 "https://192.168.48.201:5444/" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/136.0.0.0 Safari/537.36"
+2025-05-29 14:58:54,618 - INFO - 192.168.48.201 [29/May/2025:14:58:54 +0530] "GET /api/status/2066740F-8905-8D43-B5D1-56C42AE77D82 HTTP/1.1" 200 349 "https://192.168.48.201:5444/" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/136.0.0.0 Safari/537.36"
+2025-05-29 14:58:54,640 - ERROR - Error handling request from 192.168.48.201
+Traceback (most recent call last):
+  File "C:\Users\huzaifa\Projects\remote-desktop\venv\Lib\site-packages\aiohttp\web_protocol.py", line 510, in _handle_request
+    resp = await request_handler(request)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\huzaifa\Projects\remote-desktop\venv\Lib\site-packages\aiohttp\web_app.py", line 569, in _handle
+    return await handler(request)
+           ^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\huzaifa\Projects\remote-desktop\server.py", line 212, in serve_view_page
+    content = await f.read()
+              ^^^^^^^^^^^^^^
+  File "C:\Users\huzaifa\Projects\remote-desktop\venv\Lib\site-packages\aiofiles\threadpool\utils.py", line 43, in method
+    return await self._loop.run_in_executor(self._executor, cb)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Program Files\Python312\Lib\concurrent\futures\thread.py", line 58, in run
+    result = self.fn(*self.args, **self.kwargs)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Program Files\Python312\Lib\encodings\cp1252.py", line 23, in decode
+    return codecs.charmap_decode(input,self.errors,decoding_table)[0]
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+UnicodeDecodeError: 'charmap' codec can't decode byte 0x8f in position 6210: character maps to <undefined>
+2025-05-29 14:58:54,818 - INFO - 192.168.48.201 [29/May/2025:14:58:54 +0530] "GET /view.html HTTP/1.1" 500 336 "https://192.168.48.201:5444/" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/136.0.0.0 Safari/537.36"
+2025-05-29 15:01:49,119 - ERROR - Error handling request from 192.168.48.201
+Traceback (most recent call last):
+  File "C:\Users\huzaifa\Projects\remote-desktop\venv\Lib\site-packages\aiohttp\web_protocol.py", line 510, in _handle_request
+    resp = await request_handler(request)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\huzaifa\Projects\remote-desktop\venv\Lib\site-packages\aiohttp\web_app.py", line 569, in _handle
+    return await handler(request)
+           ^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\huzaifa\Projects\remote-desktop\server.py", line 212, in serve_view_page
+    content = await f.read()
+              ^^^^^^^^^^^^^^
+  File "C:\Users\huzaifa\Projects\remote-desktop\venv\Lib\site-packages\aiofiles\threadpool\utils.py", line 43, in method
+    return await self._loop.run_in_executor(self._executor, cb)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Program Files\Python312\Lib\concurrent\futures\thread.py", line 58, in run
+    result = self.fn(*self.args, **self.kwargs)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Program Files\Python312\Lib\encodings\cp1252.py", line 23, in decode
+    return codecs.charmap_decode(input,self.errors,decoding_table)[0]
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+UnicodeDecodeError: 'charmap' codec can't decode byte 0x8f in position 6210: character maps to <undefined>
+2025-05-29 15:01:49,136 - INFO - 192.168.48.201 [29/May/2025:15:01:49 +0530] "GET /view.html HTTP/1.1" 500 336 "https://192.168.48.201:5444/" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/136.0.0.0 Safari/537.36"
+2025-05-29 15:01:50,737 - ERROR - Error handling request from 192.168.48.201
+Traceback (most recent call last):
+  File "C:\Users\huzaifa\Projects\remote-desktop\venv\Lib\site-packages\aiohttp\web_protocol.py", line 510, in _handle_request
+    resp = await request_handler(request)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\huzaifa\Projects\remote-desktop\venv\Lib\site-packages\aiohttp\web_app.py", line 569, in _handle
+    return await handler(request)
+           ^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\huzaifa\Projects\remote-desktop\server.py", line 212, in serve_view_page
+    content = await f.read()
+              ^^^^^^^^^^^^^^
+  File "C:\Users\huzaifa\Projects\remote-desktop\venv\Lib\site-packages\aiofiles\threadpool\utils.py", line 43, in method
+    return await self._loop.run_in_executor(self._executor, cb)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Program Files\Python312\Lib\concurrent\futures\thread.py", line 58, in run
+    result = self.fn(*self.args, **self.kwargs)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Program Files\Python312\Lib\encodings\cp1252.py", line 23, in decode
+    return codecs.charmap_decode(input,self.errors,decoding_table)[0]
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+UnicodeDecodeError: 'charmap' codec can't decode byte 0x8f in position 6210: character maps to <undefined>
+2025-05-29 15:01:50,740 - INFO - 192.168.48.201 [29/May/2025:15:01:50 +0530] "GET /view.html HTTP/1.1" 500 336 "https://192.168.48.201:5444/" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/136.0.0.0 Safari/537.36"
+2025-05-29 15:01:57,679 - INFO - 192.168.48.201 [29/May/2025:15:01:57 +0530] "GET / HTTP/1.1" 200 8846 "-" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/136.0.0.0 Safari/537.36"
+2025-05-29 15:01:59,632 - INFO - 192.168.48.201 [29/May/2025:15:01:59 +0530] "GET /api/status/2066740F-8905-8D43-B5D1-56C42AE77D82 HTTP/1.1" 200 349 "https://192.168.48.201:5444/" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/136.0.0.0 Safari/537.36"
+2025-05-29 15:01:59,659 - ERROR - Error handling request from 192.168.48.201
+Traceback (most recent call last):
+  File "C:\Users\huzaifa\Projects\remote-desktop\venv\Lib\site-packages\aiohttp\web_protocol.py", line 510, in _handle_request
+    resp = await request_handler(request)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\huzaifa\Projects\remote-desktop\venv\Lib\site-packages\aiohttp\web_app.py", line 569, in _handle
+    return await handler(request)
+           ^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\huzaifa\Projects\remote-desktop\server.py", line 212, in serve_view_page
+    content = await f.read()
+              ^^^^^^^^^^^^^^
+  File "C:\Users\huzaifa\Projects\remote-desktop\venv\Lib\site-packages\aiofiles\threadpool\utils.py", line 43, in method
+    return await self._loop.run_in_executor(self._executor, cb)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Program Files\Python312\Lib\concurrent\futures\thread.py", line 58, in run
+    result = self.fn(*self.args, **self.kwargs)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Program Files\Python312\Lib\encodings\cp1252.py", line 23, in decode
+    return codecs.charmap_decode(input,self.errors,decoding_table)[0]
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+UnicodeDecodeError: 'charmap' codec can't decode byte 0x8f in position 6210: character maps to <undefined>
+2025-05-29 15:01:59,661 - INFO - 192.168.48.201 [29/May/2025:15:01:59 +0530] "GET /view.html HTTP/1.1" 500 336 "https://192.168.48.201:5444/" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/136.0.0.0 Safari/537.36"
+2025-05-29 15:01:59,662 - ERROR - Exception in callback _ProactorBasePipeTransport._call_connection_lost(None)
+handle: <Handle _ProactorBasePipeTransport._call_connection_lost(None)>
+Traceback (most recent call last):
+  File "C:\Program Files\Python312\Lib\asyncio\events.py", line 84, in _run
+    self._context.run(self._callback, *self._args)
+  File "C:\Program Files\Python312\Lib\asyncio\proactor_events.py", line 165, in _call_connection_lost
+    self._sock.shutdown(socket.SHUT_RDWR)
+ConnectionResetError: [WinError 10054] An existing connection was forcibly closed by the remote host
+2025-05-29 15:03:19,917 - ERROR - Error handling request from 192.168.48.201
+Traceback (most recent call last):
+  File "C:\Users\huzaifa\Projects\remote-desktop\venv\Lib\site-packages\aiohttp\web_protocol.py", line 510, in _handle_request
+    resp = await request_handler(request)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\huzaifa\Projects\remote-desktop\venv\Lib\site-packages\aiohttp\web_app.py", line 569, in _handle
+    return await handler(request)
+           ^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\huzaifa\Projects\remote-desktop\server.py", line 212, in serve_view_page
+    async with aiofiles.open('view.html', 'r', encoding='utf-8') as f:
+                  ^^^^^^^^^^^^^^
+  File "C:\Users\huzaifa\Projects\remote-desktop\venv\Lib\site-packages\aiofiles\threadpool\utils.py", line 43, in method
+    return await self._loop.run_in_executor(self._executor, cb)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Program Files\Python312\Lib\concurrent\futures\thread.py", line 58, in run
+    result = self.fn(*self.args, **self.kwargs)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Program Files\Python312\Lib\encodings\cp1252.py", line 23, in decode
+    return codecs.charmap_decode(input,self.errors,decoding_table)[0]
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+UnicodeDecodeError: 'charmap' codec can't decode byte 0x8f in position 6210: character maps to <undefined>
+2025-05-29 15:03:19,935 - INFO - 192.168.48.201 [29/May/2025:15:03:19 +0530] "GET /view.html HTTP/1.1" 500 336 "https://192.168.48.201:5444/" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/136.0.0.0 Safari/537.36"
+2025-05-29 15:03:24,858 - INFO - 192.168.48.201 [29/May/2025:15:03:24 +0530] "GET / HTTP/1.1" 200 8846 "-" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/136.0.0.0 Safari/537.36"
+2025-05-29 15:03:26,505 - INFO - 192.168.48.201 [29/May/2025:15:03:26 +0530] "GET /api/status/2066740F-8905-8D43-B5D1-56C42AE77D82 HTTP/1.1" 200 349 "https://192.168.48.201:5444/" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/136.0.0.0 Safari/537.36"
+2025-05-29 15:03:26,535 - ERROR - Error handling request from 192.168.48.201
+Traceback (most recent call last):
+  File "C:\Users\huzaifa\Projects\remote-desktop\venv\Lib\site-packages\aiohttp\web_protocol.py", line 510, in _handle_request
+    resp = await request_handler(request)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\huzaifa\Projects\remote-desktop\venv\Lib\site-packages\aiohttp\web_app.py", line 569, in _handle
+    return await handler(request)
+           ^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\huzaifa\Projects\remote-desktop\server.py", line 212, in serve_view_page
+    async with aiofiles.open('view.html', 'r', encoding='utf-8') as f:
+                  ^^^^^^^^^^^^^^
+  File "C:\Users\huzaifa\Projects\remote-desktop\venv\Lib\site-packages\aiofiles\threadpool\utils.py", line 43, in method
+    return await self._loop.run_in_executor(self._executor, cb)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Program Files\Python312\Lib\concurrent\futures\thread.py", line 58, in run
+    result = self.fn(*self.args, **self.kwargs)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Program Files\Python312\Lib\encodings\cp1252.py", line 23, in decode
+    return codecs.charmap_decode(input,self.errors,decoding_table)[0]
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+UnicodeDecodeError: 'charmap' codec can't decode byte 0x8f in position 6210: character maps to <undefined>
+2025-05-29 15:03:26,537 - INFO - 192.168.48.201 [29/May/2025:15:03:26 +0530] "GET /view.html HTTP/1.1" 500 336 "https://192.168.48.201:5444/" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/136.0.0.0 Safari/537.36"
+2025-05-29 15:03:26,538 - ERROR - Exception in callback _ProactorBasePipeTransport._call_connection_lost(None)
+handle: <Handle _ProactorBasePipeTransport._call_connection_lost(None)>
+Traceback (most recent call last):
+  File "C:\Program Files\Python312\Lib\asyncio\events.py", line 84, in _run
+    self._context.run(self._callback, *self._args)
+  File "C:\Program Files\Python312\Lib\asyncio\proactor_events.py", line 165, in _call_connection_lost
+    self._sock.shutdown(socket.SHUT_RDWR)
+ConnectionResetError: [WinError 10054] An existing connection was forcibly closed by the remote host
+2025-05-29 15:04:27,187 - INFO - 192.168.48.201 [29/May/2025:15:04:27 +0530] "GET / HTTP/1.1" 200 8846 "-" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/136.0.0.0 Safari/537.36"
+2025-05-29 15:04:28,710 - INFO - 192.168.48.201 [29/May/2025:15:04:28 +0530] "GET /api/status/2066740F-8905-8D43-B5D1-56C42AE77D82 HTTP/1.1" 200 349 "https://192.168.48.201:5444/" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/136.0.0.0 Safari/537.36"
+2025-05-29 15:04:28,733 - ERROR - Error handling request from 192.168.48.201
+Traceback (most recent call last):
+  File "C:\Users\huzaifa\Projects\remote-desktop\venv\Lib\site-packages\aiohttp\web_protocol.py", line 510, in _handle_request
+    resp = await request_handler(request)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\huzaifa\Projects\remote-desktop\venv\Lib\site-packages\aiohttp\web_app.py", line 569, in _handle
+    return await handler(request)
+           ^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\huzaifa\Projects\remote-desktop\server.py", line 212, in serve_view_page
+    content = await f.read()
+              ^^^^^^^^^^^^^^
+  File "C:\Users\huzaifa\Projects\remote-desktop\venv\Lib\site-packages\aiofiles\threadpool\utils.py", line 43, in method
+    return await self._loop.run_in_executor(self._executor, cb)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Program Files\Python312\Lib\concurrent\futures\thread.py", line 58, in run
+    result = self.fn(*self.args, **self.kwargs)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Program Files\Python312\Lib\encodings\cp1252.py", line 23, in decode
+    return codecs.charmap_decode(input,self.errors,decoding_table)[0]
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+UnicodeDecodeError: 'charmap' codec can't decode byte 0x8f in position 6210: character maps to <undefined>
+2025-05-29 15:04:28,763 - INFO - 192.168.48.201 [29/May/2025:15:04:28 +0530] "GET /view.html HTTP/1.1" 500 336 "https://192.168.48.201:5444/" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/136.0.0.0 Safari/537.36"
+2025-05-29 15:05:25,465 - INFO - 192.168.48.201 [29/May/2025:15:05:25 +0530] "GET / HTTP/1.1" 200 8846 "-" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/136.0.0.0 Safari/537.36"
+2025-05-29 15:05:27,089 - INFO - 192.168.48.201 [29/May/2025:15:05:27 +0530] "GET /api/status/2066740F-8905-8D43-B5D1-56C42AE77D82 HTTP/1.1" 200 348 "https://192.168.48.201:5444/" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/136.0.0.0 Safari/537.36"
+2025-05-29 15:05:27,131 - ERROR - Error handling request from 192.168.48.201
+Traceback (most recent call last):
+  File "C:\Users\huzaifa\Projects\remote-desktop\venv\Lib\site-packages\aiohttp\web_protocol.py", line 510, in _handle_request
+    resp = await request_handler(request)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\huzaifa\Projects\remote-desktop\venv\Lib\site-packages\aiohttp\web_app.py", line 569, in _handle
+    return await handler(request)
+           ^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\huzaifa\Projects\remote-desktop\server.py", line 212, in serve_view_page
+    #             content = await f.read()
+                          ^^^^^^^^^^^^^^
+  File "C:\Users\huzaifa\Projects\remote-desktop\venv\Lib\site-packages\aiofiles\threadpool\utils.py", line 43, in method
+    return await self._loop.run_in_executor(self._executor, cb)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Program Files\Python312\Lib\concurrent\futures\thread.py", line 58, in run
+    result = self.fn(*self.args, **self.kwargs)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Program Files\Python312\Lib\encodings\cp1252.py", line 23, in decode
+    return codecs.charmap_decode(input,self.errors,decoding_table)[0]
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+UnicodeDecodeError: 'charmap' codec can't decode byte 0x8f in position 6210: character maps to <undefined>
+2025-05-29 15:05:27,162 - INFO - 192.168.48.201 [29/May/2025:15:05:27 +0530] "GET /view.html HTTP/1.1" 500 336 "https://192.168.48.201:5444/" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/136.0.0.0 Safari/537.36"
+2025-05-29 15:06:41,117 - INFO - 192.168.48.201 [29/May/2025:15:06:41 +0530] "GET / HTTP/1.1" 200 8846 "-" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/136.0.0.0 Safari/537.36"
+2025-05-29 15:06:42,665 - INFO - 192.168.48.201 [29/May/2025:15:06:42 +0530] "GET /api/status/2066740F-8905-8D43-B5D1-56C42AE77D82 HTTP/1.1" 200 349 "https://192.168.48.201:5444/" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/136.0.0.0 Safari/537.36"
+2025-05-29 15:06:42,740 - ERROR - Error handling request from 192.168.48.201
+Traceback (most recent call last):
+  File "C:\Users\huzaifa\Projects\remote-desktop\venv\Lib\site-packages\aiohttp\web_protocol.py", line 510, in _handle_request
+    resp = await request_handler(request)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\huzaifa\Projects\remote-desktop\venv\Lib\site-packages\aiohttp\web_app.py", line 569, in _handle
+    return await handler(request)
+           ^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\huzaifa\Projects\remote-desktop\server.py", line 212, in serve_view_page
+    content = await f.read()
+              ^^^^^^^^^^^^^^
+  File "C:\Users\huzaifa\Projects\remote-desktop\venv\Lib\site-packages\aiofiles\threadpool\utils.py", line 43, in method
+    return await self._loop.run_in_executor(self._executor, cb)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Program Files\Python312\Lib\concurrent\futures\thread.py", line 58, in run
+    result = self.fn(*self.args, **self.kwargs)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Program Files\Python312\Lib\encodings\cp1252.py", line 23, in decode
+    return codecs.charmap_decode(input,self.errors,decoding_table)[0]
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+UnicodeDecodeError: 'charmap' codec can't decode byte 0x8f in position 6210: character maps to <undefined>
+2025-05-29 15:06:42,773 - INFO - 192.168.48.201 [29/May/2025:15:06:42 +0530] "GET /view.html HTTP/1.1" 500 336 "https://192.168.48.201:5444/" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/136.0.0.0 Safari/537.36"
+2025-05-29 15:12:13,330 - INFO - 192.168.48.201 [29/May/2025:15:12:13 +0530] "GET / HTTP/1.1" 200 8846 "-" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/136.0.0.0 Safari/537.36"
+2025-05-29 15:12:17,579 - ERROR - Error handling request from 192.168.48.201
+Traceback (most recent call last):
+  File "C:\Users\huzaifa\Projects\remote-desktop\venv\Lib\site-packages\aiohttp\web_protocol.py", line 510, in _handle_request
+    resp = await request_handler(request)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\huzaifa\Projects\remote-desktop\venv\Lib\site-packages\aiohttp\web_app.py", line 569, in _handle
+    return await handler(request)
+           ^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\huzaifa\Projects\remote-desktop\server.py", line 212, in serve_view_page
+    content = await f.read()
+              ^^^^^^^^^^^^^^
+  File "C:\Users\huzaifa\Projects\remote-desktop\venv\Lib\site-packages\aiofiles\threadpool\utils.py", line 43, in method
+    return await self._loop.run_in_executor(self._executor, cb)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Program Files\Python312\Lib\concurrent\futures\thread.py", line 58, in run
+    result = self.fn(*self.args, **self.kwargs)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Program Files\Python312\Lib\encodings\cp1252.py", line 23, in decode
+    return codecs.charmap_decode(input,self.errors,decoding_table)[0]
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+UnicodeDecodeError: 'charmap' codec can't decode byte 0x8f in position 6210: character maps to <undefined>
+2025-05-29 15:12:17,584 - INFO - 192.168.48.201 [29/May/2025:15:12:17 +0530] "GET /view.html HTTP/1.1" 500 336 "https://192.168.48.201:5444/" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/136.0.0.0 Safari/537.36"
+2025-05-29 15:15:39,229 - INFO - CLIENT DISCONNECT - UUID: 2066740F-8905-8D43-B5D1-56C42AE77D82, IP: 192.168.48.25
+2025-05-29 15:15:39,230 - INFO - 192.168.48.25 [29/May/2025:14:58:13 +0530] "GET /ws HTTP/1.1" 101 0 "-" "Python/3.13 websockets/15.0.1"
+2025-05-29 15:16:52,909 - INFO - CLIENT CONNECT - UUID: 2066740F-8905-8D43-B5D1-56C42AE77D82, IP: 192.168.48.25
+2025-05-29 15:17:19,383 - INFO - 192.168.48.201 [29/May/2025:15:17:19 +0530] "GET /api/status/2066740F-8905-8D43-B5D1-56C42AE77D82 HTTP/1.1" 200 347 "https://192.168.48.201:5444/" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/136.0.0.0 Safari/537.36"
+2025-05-29 15:17:19,408 - ERROR - Error handling request from 192.168.48.201
+Traceback (most recent call last):
+  File "C:\Users\huzaifa\Projects\remote-desktop\venv\Lib\site-packages\aiohttp\web_protocol.py", line 510, in _handle_request
+    resp = await request_handler(request)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\huzaifa\Projects\remote-desktop\venv\Lib\site-packages\aiohttp\web_app.py", line 569, in _handle
+    return await handler(request)
+           ^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\huzaifa\Projects\remote-desktop\server.py", line 212, in serve_view_page
+    content = await f.read()
+              ^^^^^^^^^^^^^^
+  File "C:\Users\huzaifa\Projects\remote-desktop\venv\Lib\site-packages\aiofiles\threadpool\utils.py", line 43, in method
+    return await self._loop.run_in_executor(self._executor, cb)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Program Files\Python312\Lib\concurrent\futures\thread.py", line 58, in run
+    result = self.fn(*self.args, **self.kwargs)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Program Files\Python312\Lib\encodings\cp1252.py", line 23, in decode
+    return codecs.charmap_decode(input,self.errors,decoding_table)[0]
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+UnicodeDecodeError: 'charmap' codec can't decode byte 0x8f in position 6210: character maps to <undefined>
+2025-05-29 15:17:19,412 - INFO - 192.168.48.201 [29/May/2025:15:17:19 +0530] "GET /view.html HTTP/1.1" 500 336 "https://192.168.48.201:5444/" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/136.0.0.0 Safari/537.36"
+2025-05-29 15:21:20,876 - INFO - CLIENT DISCONNECT - UUID: 2066740F-8905-8D43-B5D1-56C42AE77D82, IP: 192.168.48.25
+2025-05-29 15:21:20,877 - INFO - 192.168.48.25 [29/May/2025:15:16:52 +0530] "GET /ws HTTP/1.1" 101 0 "-" "Python/3.13 websockets/15.0.1"
+2025-05-29 15:21:25,207 - INFO - CLIENT CONNECT - UUID: 2066740F-8905-8D43-B5D1-56C42AE77D82, IP: 192.168.48.25
+2025-05-29 15:21:33,523 - INFO - CLIENT DISCONNECT - UUID: 2066740F-8905-8D43-B5D1-56C42AE77D82, IP: 192.168.48.25
+2025-05-29 15:21:33,524 - INFO - 192.168.48.25 [29/May/2025:15:21:25 +0530] "GET /ws HTTP/1.1" 101 0 "-" "Python/3.13 websockets/15.0.1"
+2025-05-29 15:22:17,636 - INFO - CLIENT CONNECT - UUID: 2066740F-8905-8D43-B5D1-56C42AE77D82, IP: 192.168.48.25
+2025-05-29 15:27:56,948 - INFO - CLIENT CONNECT - UUID: 2066740F-8905-8D43-B5D1-56C42AE77D82, IP: 192.168.48.25
+2025-05-29 15:28:07,893 - INFO - 192.168.48.201 [29/May/2025:15:28:07 +0530] "GET / HTTP/1.1" 200 8846 "-" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/136.0.0.0 Safari/537.36"
+2025-05-29 15:28:31,264 - INFO - 192.168.48.201 [29/May/2025:15:28:31 +0530] "GET /api/status/2066740F-8905-8D43-B5D1-56C42AE77D82 HTTP/1.1" 200 349 "https://192.168.48.201:5444/" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/136.0.0.0 Safari/537.36"
+2025-05-29 15:28:31,306 - ERROR - Error handling request from 192.168.48.201
+Traceback (most recent call last):
+  File "C:\Users\huzaifa\Projects\remote-desktop\venv\Lib\site-packages\aiohttp\web_protocol.py", line 510, in _handle_request
+    resp = await request_handler(request)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\huzaifa\Projects\remote-desktop\venv\Lib\site-packages\aiohttp\web_app.py", line 569, in _handle
+    return await handler(request)
+           ^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\huzaifa\Projects\remote-desktop\server.py", line 212, in serve_view_page
+    content = await f.read()
+              ^^^^^^^^^^^^^^
+  File "C:\Users\huzaifa\Projects\remote-desktop\venv\Lib\site-packages\aiofiles\threadpool\utils.py", line 43, in method
+    return await self._loop.run_in_executor(self._executor, cb)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Program Files\Python312\Lib\concurrent\futures\thread.py", line 58, in run
+    result = self.fn(*self.args, **self.kwargs)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Program Files\Python312\Lib\encodings\cp1252.py", line 23, in decode
+    return codecs.charmap_decode(input,self.errors,decoding_table)[0]
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+UnicodeDecodeError: 'charmap' codec can't decode byte 0x8f in position 6210: character maps to <undefined>
+2025-05-29 15:28:31,309 - INFO - 192.168.48.201 [29/May/2025:15:28:31 +0530] "GET /view.html HTTP/1.1" 500 336 "https://192.168.48.201:5444/" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/136.0.0.0 Safari/537.36"
+2025-05-29 15:30:56,683 - INFO - 192.168.48.201 [29/May/2025:15:30:56 +0530] "GET / HTTP/1.1" 200 8846 "-" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/136.0.0.0 Safari/537.36"
+2025-05-29 15:30:58,490 - INFO - 192.168.48.201 [29/May/2025:15:30:58 +0530] "GET /api/status/2066740F-8905-8D43-B5D1-56C42AE77D82 HTTP/1.1" 200 349 "https://192.168.48.201:5444/" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/136.0.0.0 Safari/537.36"
+2025-05-29 15:30:58,508 - ERROR - Error handling request from 192.168.48.201
+Traceback (most recent call last):
+  File "C:\Users\huzaifa\Projects\remote-desktop\venv\Lib\site-packages\aiohttp\web_protocol.py", line 510, in _handle_request
+    resp = await request_handler(request)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\huzaifa\Projects\remote-desktop\venv\Lib\site-packages\aiohttp\web_app.py", line 569, in _handle
+    return await handler(request)
+           ^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\huzaifa\Projects\remote-desktop\server.py", line 212, in serve_view_page
+    #             content = await f.read()
+                          ^^^^^^^^^^^^^^
+  File "C:\Users\huzaifa\Projects\remote-desktop\venv\Lib\site-packages\aiofiles\threadpool\utils.py", line 43, in method
+    return await self._loop.run_in_executor(self._executor, cb)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Program Files\Python312\Lib\concurrent\futures\thread.py", line 58, in run
+    result = self.fn(*self.args, **self.kwargs)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Program Files\Python312\Lib\encodings\cp1252.py", line 23, in decode
+    return codecs.charmap_decode(input,self.errors,decoding_table)[0]
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+UnicodeDecodeError: 'charmap' codec can't decode byte 0x8f in position 6210: character maps to <undefined>
+2025-05-29 15:30:58,531 - INFO - 192.168.48.201 [29/May/2025:15:30:58 +0530] "GET /view.html HTTP/1.1" 500 336 "https://192.168.48.201:5444/" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/136.0.0.0 Safari/537.36"
+2025-05-29 15:30:58,533 - ERROR - Exception in callback _ProactorBasePipeTransport._call_connection_lost(None)
+handle: <Handle _ProactorBasePipeTransport._call_connection_lost(None)>
+Traceback (most recent call last):
+  File "C:\Program Files\Python312\Lib\asyncio\events.py", line 84, in _run
+    self._context.run(self._callback, *self._args)
+  File "C:\Program Files\Python312\Lib\asyncio\proactor_events.py", line 165, in _call_connection_lost
+    self._sock.shutdown(socket.SHUT_RDWR)
+ConnectionResetError: [WinError 10054] An existing connection was forcibly closed by the remote host
+2025-05-29 15:31:43,441 - INFO - CLIENT DISCONNECT - UUID: 2066740F-8905-8D43-B5D1-56C42AE77D82, IP: 192.168.48.25
+2025-05-29 15:31:43,442 - INFO - CLIENT DISCONNECT - UUID: 2066740F-8905-8D43-B5D1-56C42AE77D82, IP: 192.168.48.25
+2025-05-29 15:31:54,278 - INFO - 192.168.48.201 [29/May/2025:15:31:54 +0530] "GET / HTTP/1.1" 200 9118 "-" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/136.0.0.0 Safari/537.36"
+2025-05-29 15:32:24,638 - INFO - 192.168.48.201 [29/May/2025:15:32:24 +0530] "GET /api/status/2066740F-8905-8D43-B5D1-56C42AE77D82 HTTP/1.1" 200 289 "https://192.168.48.201:5444/" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/136.0.0.0 Safari/537.36"
+2025-05-29 15:32:43,223 - INFO - CLIENT CONNECT - UUID: 2066740F-8905-8D43-B5D1-56C42AE77D82, IP: 192.168.48.25
+2025-05-29 15:32:47,724 - INFO - 192.168.48.201 [29/May/2025:15:32:47 +0530] "GET /api/status/2066740F-8905-8D43-B5D1-56C42AE77D82 HTTP/1.1" 200 348 "https://192.168.48.201:5444/" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/136.0.0.0 Safari/537.36"
+2025-05-29 15:32:47,771 - INFO - 192.168.48.201 [29/May/2025:15:32:47 +0530] "GET /view.html HTTP/1.1" 200 25941 "https://192.168.48.201:5444/" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/136.0.0.0 Safari/537.36"
+2025-05-29 15:32:47,852 - INFO - VIEWER CONNECT - UUID: 2066740F-8905-8D43-B5D1-56C42AE77D82, IP: 192.168.48.201
+2025-05-29 15:38:27,425 - INFO - CLIENT DISCONNECT - UUID: 2066740F-8905-8D43-B5D1-56C42AE77D82, IP: 192.168.48.25
+2025-05-29 15:38:27,426 - INFO - 192.168.48.25 [29/May/2025:15:32:43 +0530] "GET /ws HTTP/1.1" 101 0 "-" "Python/3.13 websockets/15.0.1"
+2025-05-29 15:41:23,926 - INFO - CLIENT CONNECT - UUID: 2066740F-8905-8D43-B5D1-56C42AE77D82, IP: 192.168.48.25
+2025-05-29 15:41:42,901 - INFO - 192.168.48.201 [29/May/2025:15:41:42 +0530] "GET /view.html HTTP/1.1" 200 25941 "https://192.168.48.201:5444/" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/136.0.0.0 Safari/537.36"
+2025-05-29 15:41:42,907 - INFO - VIEWER DISCONNECT - UUID: 2066740F-8905-8D43-B5D1-56C42AE77D82, IP: 192.168.48.201
+2025-05-29 15:41:42,908 - INFO - 192.168.48.201 [29/May/2025:15:32:47 +0530] "GET /ws HTTP/1.1" 101 0 "-" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/136.0.0.0 Safari/537.36"
+2025-05-29 15:41:43,003 - INFO - VIEWER CONNECT - UUID: 2066740F-8905-8D43-B5D1-56C42AE77D82, IP: 192.168.48.201
+2025-05-29 15:45:27,578 - INFO - CLIENT DISCONNECT - UUID: 2066740F-8905-8D43-B5D1-56C42AE77D82, IP: 192.168.48.25
+2025-05-29 15:45:27,579 - INFO - 192.168.48.25 [29/May/2025:15:41:23 +0530] "GET /ws HTTP/1.1" 101 0 "-" "Python/3.13 websockets/15.0.1"
+2025-05-29 16:10:47,224 - INFO - CLIENT CONNECT - UUID: 2066740F-8905-8D43-B5D1-56C42AE77D82, IP: 192.168.48.25
+2025-05-29 16:14:49,689 - INFO - VIEWER DISCONNECT - UUID: 2066740F-8905-8D43-B5D1-56C42AE77D82, IP: 192.168.48.201
+2025-05-29 16:14:49,690 - INFO - CLIENT DISCONNECT - UUID: 2066740F-8905-8D43-B5D1-56C42AE77D82, IP: 192.168.48.25

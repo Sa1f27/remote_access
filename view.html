@@ -1,0 +1,691 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Remote Desktop - Viewer</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: #000;
+            color: white;
+            overflow: hidden;
+        }
+
+        .toolbar {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            background: rgba(0, 0, 0, 0.9);
+            backdrop-filter: blur(10px);
+            padding: 10px 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            z-index: 1000;
+            transition: transform 0.3s ease;
+        }
+
+        .toolbar.hidden {
+            transform: translateY(-100%);
+        }
+
+        .toolbar-left, .toolbar-right {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .control-btn {
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            color: white;
+            padding: 8px 16px;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-size: 14px;
+        }
+
+        .control-btn:hover {
+            background: rgba(255, 255, 255, 0.2);
+        }
+
+        .control-btn.active {
+            background: #2196F3;
+            border-color: #2196F3;
+        }
+
+        .audio-mode-select {
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            color: white;
+            padding: 8px 12px;
+            border-radius: 6px;
+            font-size: 14px;
+        }
+
+        .status-indicator {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 14px;
+        }
+
+        .status-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: #4CAF50;
+        }
+
+        .status-dot.disconnected {
+            background: #f44336;
+        }
+
+        .stats {
+            font-size: 12px;
+            opacity: 0.8;
+        }
+
+        .screen-container {
+            position: relative;
+            width: 100vw;
+            height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: #111;
+        }
+
+        .screen-display {
+            max-width: 100%;
+            max-height: 100%;
+            object-fit: contain;
+            cursor: none;
+        }
+
+        .screen-display.controllable {
+            cursor: crosshair;
+        }
+
+        .connection-status {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            text-align: center;
+            font-size: 18px;
+            opacity: 0.7;
+        }
+
+        .fullscreen-controls {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            display: flex;
+            gap: 10px;
+            z-index: 1000;
+        }
+
+        .volume-control {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .volume-slider {
+            width: 100px;
+        }
+
+        .error-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.9);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 2000;
+            display: none;
+        }
+
+        .error-content {
+            background: rgba(255, 0, 0, 0.1);
+            border: 1px solid rgba(255, 0, 0, 0.5);
+            border-radius: 10px;
+            padding: 30px;
+            text-align: center;
+            max-width: 400px;
+        }
+
+        .loading-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.9);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 2000;
+        }
+
+        .loading-spinner {
+            width: 50px;
+            height: 50px;
+            border: 3px solid rgba(255, 255, 255, 0.3);
+            border-radius: 50%;
+            border-top-color: white;
+            animation: spin 1s ease-in-out infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        /* Hide toolbar in fullscreen */
+        .fullscreen .toolbar {
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <!-- Toolbar -->
+    <div class="toolbar" id="toolbar">
+        <div class="toolbar-left">
+            <div class="status-indicator">
+                <div class="status-dot" id="connectionDot"></div>
+                <span id="connectionStatus">Connecting...</span>
+            </div>
+            <div class="stats" id="statsDisplay">
+                Latency: -- ms | FPS: -- | Uptime: --
+            </div>
+        </div>
+        
+        <div class="toolbar-right">
+            <div class="volume-control">
+                <button class="control-btn" id="audioToggle">🔊 Audio</button>
+                <input type="range" class="volume-slider" id="volumeSlider" min="0" max="100" value="50">
+            </div>
+            
+            <select class="audio-mode-select" id="audioModeSelect">
+                <option value="client_only">Client Only</option>
+                <option value="viewer_only">Viewer Only</option>
+                <option value="merged">Merged Audio</option>
+            </select>
+            
+            <button class="control-btn" id="controlToggle">🖱️ Control</button>
+            <button class="control-btn" id="fullscreenToggle">⛶ Fullscreen</button>
+        </div>
+    </div>
+
+    <!-- Screen Display -->
+    <div class="screen-container" id="screenContainer">
+        <img class="screen-display" id="screenDisplay" style="display: none;">
+        <div class="connection-status" id="connectionMessage">
+            Connecting to remote desktop...
+        </div>
+    </div>
+
+    <!-- Fullscreen Controls -->
+    <div class="fullscreen-controls" id="fullscreenControls" style="display: none;">
+        <button class="control-btn" id="exitFullscreen">Exit Fullscreen</button>
+    </div>
+
+    <!-- Loading Overlay -->
+    <div class="loading-overlay" id="loadingOverlay">
+        <div>
+            <div class="loading-spinner"></div>
+            <p style="margin-top: 20px;">Establishing connection...</p>
+        </div>
+    </div>
+
+    <!-- Error Overlay -->
+    <div class="error-overlay" id="errorOverlay">
+        <div class="error-content">
+            <h3>Connection Error</h3>
+            <p id="errorMessage">Failed to connect to remote desktop</p>
+            <button class="control-btn" onclick="location.reload()" style="margin-top: 20px;">
+                Retry Connection
+            </button>
+        </div>
+    </div>
+
+    <!-- Hidden audio element for playback -->
+    <audio id="audioPlayer" style="display: none;"></audio>
+
+    <script>
+        class RemoteDesktopViewer {
+            constructor() {
+                this.uuid = sessionStorage.getItem('clientUUID');
+                this.ws = null;
+                this.isConnected = false;
+                this.isControlEnabled = false;
+                this.isAudioEnabled = true;
+                this.isFullscreen = false;
+                this.audioMode = 'viewer_only';
+                this.volume = 0.5;
+                
+                this.initializeElements();
+                this.setupEventListeners();
+                this.connect();
+                
+                if (!this.uuid) {
+                    this.showError('No client UUID provided. Please go back and enter a UUID.');
+                    return;
+                }
+            }
+
+            initializeElements() {
+                this.toolbar = document.getElementById('toolbar');
+                this.screenDisplay = document.getElementById('screenDisplay');
+                this.connectionDot = document.getElementById('connectionDot');
+                this.connectionStatus = document.getElementById('connectionStatus');
+                this.connectionMessage = document.getElementById('connectionMessage');
+                this.statsDisplay = document.getElementById('statsDisplay');
+                this.audioToggle = document.getElementById('audioToggle');
+                this.controlToggle = document.getElementById('controlToggle');
+                this.fullscreenToggle = document.getElementById('fullscreenToggle');
+                this.audioModeSelect = document.getElementById('audioModeSelect');
+                this.volumeSlider = document.getElementById('volumeSlider');
+                this.loadingOverlay = document.getElementById('loadingOverlay');
+                this.errorOverlay = document.getElementById('errorOverlay');
+                this.audioPlayer = document.getElementById('audioPlayer');
+            }
+
+            setupEventListeners() {
+                // Control buttons
+                this.audioToggle.addEventListener('click', () => this.toggleAudio());
+                this.controlToggle.addEventListener('click', () => this.toggleControl());
+                this.fullscreenToggle.addEventListener('click', () => this.toggleFullscreen());
+                
+                // Audio controls
+                this.audioModeSelect.addEventListener('change', () => this.changeAudioMode());
+                this.volumeSlider.addEventListener('input', () => this.changeVolume());
+                
+                // Screen interactions
+                this.screenDisplay.addEventListener('mousemove', (e) => this.handleMouseMove(e));
+                this.screenDisplay.addEventListener('click', (e) => this.handleMouseClick(e));
+                this.screenDisplay.addEventListener('wheel', (e) => this.handleMouseWheel(e));
+                
+                // Keyboard events
+                document.addEventListener('keydown', (e) => this.handleKeyDown(e));
+                document.addEventListener('keyup', (e) => this.handleKeyUp(e));
+                
+                // Fullscreen events
+                document.addEventListener('fullscreenchange', () => this.handleFullscreenChange());
+                
+                // Hide toolbar on mouse inactivity
+                this.setupToolbarAutoHide();
+            }
+
+            setupToolbarAutoHide() {
+                let hideTimeout;
+                
+                const showToolbar = () => {
+                    this.toolbar.classList.remove('hidden');
+                    clearTimeout(hideTimeout);
+                    hideTimeout = setTimeout(() => {
+                        if (this.isFullscreen) {
+                            this.toolbar.classList.add('hidden');
+                        }
+                    }, 3000);
+                };
+
+                document.addEventListener('mousemove', showToolbar);
+                document.addEventListener('keydown', showToolbar);
+            }
+
+            async connect() {
+                try {
+                    const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+                    const wsUrl = `${protocol}//${window.location.host}/ws`;
+                    
+                    this.ws = new WebSocket(wsUrl);
+                    
+                    this.ws.onopen = () => {
+                        console.log('WebSocket connected');
+                        this.ws.send(JSON.stringify({
+                            type: 'viewer_connect',
+                            uuid: this.uuid
+                        }));
+                    };
+                    
+                    this.ws.onmessage = (event) => {
+                        this.handleMessage(JSON.parse(event.data));
+                    };
+                    
+                    this.ws.onclose = () => {
+                        console.log('WebSocket disconnected');
+                        this.handleDisconnection();
+                    };
+                    
+                    this.ws.onerror = (error) => {
+                        console.error('WebSocket error:', error);
+                        this.showError('Failed to connect to server');
+                    };
+                    
+                } catch (error) {
+                    this.showError('Connection failed: ' + error.message);
+                }
+            }
+
+            handleMessage(data) {
+                switch (data.type) {
+                    case 'connected':
+                        this.handleConnection();
+                        break;
+                        
+                    case 'screen_update':
+                        this.updateScreen(data.screen, data.timestamp);
+                        break;
+                        
+                    case 'audio_update':
+                        if (this.isAudioEnabled) {
+                            this.playAudio(data.audio);
+                        }
+                        break;
+                        
+                    case 'error':
+                        this.showError(data.message);
+                        break;
+                        
+                    case 'pong':
+                        this.updateLatency(data.timestamp);
+                        break;
+                }
+            }
+
+            handleConnection() {
+                this.isConnected = true;
+                this.hideLoading();
+                this.updateConnectionStatus();
+                this.connectionMessage.style.display = 'none';
+                this.startStatsUpdate();
+            }
+
+            handleDisconnection() {
+                this.isConnected = false;
+                this.updateConnectionStatus();
+                this.connectionMessage.style.display = 'block';
+                this.connectionMessage.textContent = 'Disconnected from remote desktop';
+                this.screenDisplay.style.display = 'none';
+            }
+
+            updateScreen(screenData, timestamp) {
+                this.screenDisplay.src = 'data:image/jpeg;base64,' + screenData;
+                this.screenDisplay.style.display = 'block';
+                this.connectionMessage.style.display = 'none';
+                
+                // Update FPS
+                const now = Date.now();
+                if (this.lastFrameTime) {
+                    const frameDelta = now - this.lastFrameTime;
+                    this.currentFPS = Math.round(1000 / frameDelta);
+                }
+                this.lastFrameTime = now;
+            }
+
+            playAudio(audioData) {
+                try {
+                    // Convert base64 to blob and play
+                    const audioBytes = atob(audioData);
+                    const audioArray = new Uint8Array(audioBytes.length);
+                    for (let i = 0; i < audioBytes.length; i++) {
+                        audioArray[i] = audioBytes.charCodeAt(i);
+                    }
+                    
+                    const audioBlob = new Blob([audioArray], { type: 'audio/wav' });
+                    const audioUrl = URL.createObjectURL(audioBlob);
+                    
+                    this.audioPlayer.src = audioUrl;
+                    this.audioPlayer.volume = this.volume;
+                    this.audioPlayer.play().catch(e => console.log('Audio play failed:', e));
+                    
+                } catch (error) {
+                    console.error('Audio playback error:', error);
+                }
+            }
+
+            toggleAudio() {
+                this.isAudioEnabled = !this.isAudioEnabled;
+                this.audioToggle.classList.toggle('active', this.isAudioEnabled);
+                this.audioToggle.textContent = this.isAudioEnabled ? '🔊 Audio' : '🔇 Muted';
+            }
+
+            toggleControl() {
+                this.isControlEnabled = !this.isControlEnabled;
+                this.controlToggle.classList.toggle('active', this.isControlEnabled);
+                this.screenDisplay.classList.toggle('controllable', this.isControlEnabled);
+                this.controlToggle.textContent = this.isControlEnabled ? '🖱️ Control ON' : '🖱️ Control OFF';
+            }
+
+            toggleFullscreen() {
+                if (!this.isFullscreen) {
+                    document.documentElement.requestFullscreen();
+                } else {
+                    document.exitFullscreen();
+                }
+            }
+
+            handleFullscreenChange() {
+                this.isFullscreen = !!document.fullscreenElement;
+                document.body.classList.toggle('fullscreen', this.isFullscreen);
+            }
+
+            changeAudioMode() {
+                this.audioMode = this.audioModeSelect.value;
+                if (this.ws && this.isConnected) {
+                    this.ws.send(JSON.stringify({
+                        type: 'audio_mode_change',
+                        uuid: this.uuid,
+                        mode: this.audioMode
+                    }));
+                }
+            }
+
+            changeVolume() {
+                this.volume = this.volumeSlider.value / 100;
+                this.audioPlayer.volume = this.volume;
+            }
+
+            handleMouseMove(event) {
+                if (!this.isControlEnabled || !this.ws) return;
+                
+                const rect = this.screenDisplay.getBoundingClientRect();
+                const x = Math.round((event.clientX - rect.left) / rect.width * this.screenDisplay.naturalWidth);
+                const y = Math.round((event.clientY - rect.top) / rect.height * this.screenDisplay.naturalHeight);
+                
+                this.ws.send(JSON.stringify({
+                    type: 'mouse_event',
+                    uuid: this.uuid,
+                    event: { type: 'move', x, y }
+                }));
+            }
+
+            handleMouseClick(event) {
+                if (!this.isControlEnabled || !this.ws) return;
+                
+                event.preventDefault();
+                const rect = this.screenDisplay.getBoundingClientRect();
+                const x = Math.round((event.clientX - rect.left) / rect.width * this.screenDisplay.naturalWidth);
+                const y = Math.round((event.clientY - rect.top) / rect.height * this.screenDisplay.naturalHeight);
+                const button = event.button === 0 ? 'left' : 'right';
+                
+                this.ws.send(JSON.stringify({
+                    type: 'mouse_event',
+                    uuid: this.uuid,
+                    event: { type: 'click', x, y, button }
+                }));
+            }
+
+            handleMouseWheel(event) {
+                if (!this.isControlEnabled || !this.ws) return;
+                
+                event.preventDefault();
+                this.ws.send(JSON.stringify({
+                    type: 'mouse_event',
+                    uuid: this.uuid,
+                    event: { type: 'scroll', dx: event.deltaX, dy: event.deltaY }
+                }));
+            }
+
+            handleKeyDown(event) {
+                if (!this.isControlEnabled || !this.ws) return;
+                
+                // Prevent default for control keys
+                if (event.ctrlKey || event.altKey || event.metaKey) {
+                    event.preventDefault();
+                }
+                
+                this.ws.send(JSON.stringify({
+                    type: 'keyboard_event',
+                    uuid: this.uuid,
+                    event: { type: 'press', key: event.key, code: event.code }
+                }));
+            }
+
+            handleKeyUp(event) {
+                if (!this.isControlEnabled || !this.ws) return;
+                
+                this.ws.send(JSON.stringify({
+                    type: 'keyboard_event',
+                    uuid: this.uuid,
+                    event: { type: 'release', key: event.key, code: event.code }
+                }));
+            }
+
+            updateConnectionStatus() {
+                if (this.isConnected) {
+                    this.connectionDot.classList.remove('disconnected');
+                    this.connectionStatus.textContent = 'Connected';
+                } else {
+                    this.connectionDot.classList.add('disconnected');
+                    this.connectionStatus.textContent = 'Disconnected';
+                }
+            }
+
+            startStatsUpdate() {
+                setInterval(() => {
+                    if (this.ws && this.isConnected) {
+                        // Send ping for latency measurement
+                        this.ws.send(JSON.stringify({
+                            type: 'ping',
+                            timestamp: Date.now()
+                        }));
+                    }
+                    this.updateStatsDisplay();
+                }, 1000);
+            }
+
+            updateLatency(serverTimestamp) {
+                this.latency = Date.now() - serverTimestamp;
+            }
+
+            updateStatsDisplay() {
+                const latency = this.latency || 0;
+                const fps = this.currentFPS || 0;
+                const uptime = this.isConnected ? this.formatUptime((Date.now() - this.connectTime) / 1000) : '--';
+                
+                this.statsDisplay.textContent = `Latency: ${latency}ms | FPS: ${fps} | Uptime: ${uptime}`;
+            }
+
+            formatUptime(seconds) {
+                const hours = Math.floor(seconds / 3600);
+                const minutes = Math.floor((seconds % 3600) / 60);
+                const secs = Math.floor(seconds % 60);
+                
+                if (hours > 0) {
+                    return `${hours}h ${minutes}m ${secs}s`;
+                } else if (minutes > 0) {
+                    return `${minutes}m ${secs}s`;
+                } else {
+                    return `${secs}s`;
+                }
+            }
+
+            showError(message) {
+                this.hideLoading();
+                document.getElementById('errorMessage').textContent = message;
+                this.errorOverlay.style.display = 'flex';
+            }
+
+            hideLoading() {
+                this.loadingOverlay.style.display = 'none';
+            }
+
+            // Microphone access for viewer audio (when in viewer_only or merged mode)
+            async initializeMicrophone() {
+                try {
+                    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+                    this.setupAudioCapture(stream);
+                } catch (error) {
+                    console.warn('Microphone access denied:', error);
+                }
+            }
+
+            setupAudioCapture(stream) {
+                const audioContext = new AudioContext();
+                const source = audioContext.createMediaStreamSource(stream);
+                const processor = audioContext.createScriptProcessor(4096, 1, 1);
+                
+                processor.onaudioprocess = (event) => {
+                    if (this.audioMode !== 'client_only' && this.ws && this.isConnected) {
+                        const inputData = event.inputBuffer.getChannelData(0);
+                        const audioData = this.encodeAudio(inputData);
+                        
+                        this.ws.send(JSON.stringify({
+                            type: 'viewer_audio',
+                            uuid: this.uuid,
+                            audio: audioData
+                        }));
+                    }
+                };
+                
+                source.connect(processor);
+                processor.connect(audioContext.destination);
+            }
+
+            encodeAudio(float32Array) {
+                // Convert Float32Array to base64 encoded audio
+                const int16Array = new Int16Array(float32Array.length);
+                for (let i = 0; i < float32Array.length; i++) {
+                    int16Array[i] = Math.max(-32768, Math.min(32767, float32Array[i] * 32768));
+                }
+                
+                const uint8Array = new Uint8Array(int16Array.buffer);
+                return btoa(String.fromCharCode.apply(null, uint8Array));
+            }
+        }
+
+        // Initialize viewer when page loads
+        document.addEventListener('DOMContentLoaded', () => {
+            const viewer = new RemoteDesktopViewer();
+            
+            // Request microphone access for audio routing
+            viewer.initializeMicrophone();
+            
+            // Set connect time for uptime calculation
+            viewer.connectTime = Date.now();
+        });
+
+        // Handle page unload
+        window.addEventListener('beforeunload', () => {
+            if (window.viewer && window.viewer.ws) {
+                window.viewer.ws.close();
+            }
+        });
+    </script>
+</body>
+</html>
