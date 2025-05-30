@@ -284,17 +284,16 @@ class AudioOnlyServer:
                                     self.call_manager.update_audio_stats(uuid, 'system_audio')
                         
                         elif msg_type == 'client_microphone_audio':
-                            # Client's microphone -> Forward to viewer (FIXED ROUTING)
+                            # Client's microphone -> Forward to viewer 
                             uuid = data.get('uuid')
                             call_mode = self.call_manager.get_call_mode(uuid)
                             
-                            # Forward client microphone in BOTH modes (listen + both)
-                            if call_mode in ['listen', 'both']:  # Changed from just 'both'
+                            # Forward client mic in LISTEN and BOTH modes (so viewer can always hear client)
+                            if call_mode in ['listen', 'both']:
                                 viewer = self.call_manager.get_audio_viewer(uuid)
                                 if viewer:
                                     await viewer['ws'].send_str(msg.data)
                                     self.call_manager.update_audio_stats(uuid, 'mic_audio')
-                                    print(f"🎤 Forwarded client microphone to viewer (mode: {call_mode})")
                         
                         elif msg_type == 'viewer_audio':
                             # Viewer's microphone -> Forward to client
