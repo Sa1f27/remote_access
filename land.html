@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Remote Desktop - Connect</title>
+    <title>Audio Remote Call - Connect</title>
     <style>
         * {
             margin: 0;
@@ -13,7 +13,7 @@
 
         body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background: linear-gradient(135deg, #1e3c72, #2a5298);
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             color: white;
             height: 100vh;
             display: flex;
@@ -27,39 +27,40 @@
             border-radius: 20px;
             padding: 40px;
             box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
-            max-width: 400px;
+            max-width: 450px;
             width: 100%;
             text-align: center;
         }
 
         h1 {
             margin-bottom: 10px;
-            font-size: 2.5em;
+            font-size: 2.8em;
             font-weight: 300;
         }
 
         .subtitle {
             margin-bottom: 30px;
-            opacity: 0.8;
-            font-size: 1.1em;
+            opacity: 0.9;
+            font-size: 1.2em;
         }
 
         .form-group {
-            margin-bottom: 20px;
+            margin-bottom: 25px;
             text-align: left;
         }
 
         label {
             display: block;
-            margin-bottom: 8px;
+            margin-bottom: 10px;
             font-weight: 500;
+            font-size: 1.1em;
         }
 
         input[type="text"] {
             width: 100%;
-            padding: 15px;
+            padding: 18px;
             border: none;
-            border-radius: 10px;
+            border-radius: 12px;
             background: rgba(255, 255, 255, 0.2);
             color: white;
             font-size: 16px;
@@ -80,9 +81,9 @@
 
         .connect-btn {
             width: 100%;
-            padding: 15px;
+            padding: 18px;
             border: none;
-            border-radius: 10px;
+            border-radius: 12px;
             background: linear-gradient(45deg, #ff6b6b, #feca57);
             color: white;
             font-size: 18px;
@@ -111,7 +112,7 @@
         .error-message {
             background: rgba(255, 0, 0, 0.2);
             border: 1px solid rgba(255, 0, 0, 0.5);
-            border-radius: 10px;
+            border-radius: 12px;
             padding: 15px;
             margin-top: 20px;
             color: #ffcccc;
@@ -139,22 +140,42 @@
 
         .info-box {
             background: rgba(255, 255, 255, 0.1);
-            border-radius: 10px;
-            padding: 15px;
-            margin-top: 20px;
+            border-radius: 12px;
+            padding: 20px;
+            margin-top: 25px;
+            font-size: 0.95em;
+            opacity: 0.9;
+            line-height: 1.6;
+        }
+
+        .features {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+            margin-top: 15px;
+            text-align: left;
+        }
+
+        .feature {
+            display: flex;
+            align-items: center;
+            gap: 8px;
             font-size: 0.9em;
-            opacity: 0.8;
+        }
+
+        .icon {
+            font-size: 1.2em;
         }
     </style>
 </head>
 <body>
     <div class="container">
-        <h1>Remote Desktop</h1>
-        <p class="subtitle">Connect to your remote machine</p>
+        <h1>📞 Audio Call</h1>
+        <p class="subtitle">Connect to remote audio client</p>
         
         <form id="connectForm">
             <div class="form-group">
-                <label for="uuid">Client UUID</label>
+                <label for="uuid">🔐 Client UUID</label>
                 <input 
                     type="text" 
                     id="uuid" 
@@ -166,26 +187,48 @@
             </div>
             
             <button type="submit" class="connect-btn" id="connectBtn">
-                Connect
+                📞 Start Audio Call
             </button>
         </form>
         
         <div class="loading" id="loading">
             <div class="loading-spinner"></div>
-            <p>Connecting...</p>
+            <p>Connecting to audio client...</p>
         </div>
         
         <div class="error-message" id="errorMessage"></div>
         
         <div class="info-box">
+            <strong>🎵 Audio-Only Remote Call Features:</strong>
+            
+            <div class="features">
+                <div class="feature">
+                    <span class="icon">🔊</span>
+                    <span>System Audio</span>
+                </div>
+                <div class="feature">
+                    <span class="icon">🎤</span>
+                    <span>Microphone</span>
+                </div>
+                <div class="feature">
+                    <span class="icon">📞</span>
+                    <span>Two-way Calls</span>
+                </div>
+                <div class="feature">
+                    <span class="icon">📊</span>
+                    <span>Ping Monitor</span>
+                </div>
+            </div>
+            
+            <br>
             <strong>Instructions:</strong><br>
-            Enter the UUID from your client machine to establish a connection.
-            The client must be running and authorized to connect.
+            Enter the UUID from your audio client to establish a call connection.
+            The client must be running and authorized.
         </div>
     </div>
 
     <script>
-        class RemoteDesktopConnector {
+        class AudioCallConnector {
             constructor() {
                 this.form = document.getElementById('connectForm');
                 this.uuidInput = document.getElementById('uuid');
@@ -225,13 +268,13 @@
                         throw new Error('Invalid UUID format');
                     }
 
-                    // Check if client is connected
-                    const isConnected = await this.checkClientConnection(uuid);
+                    // Check if audio client is connected
+                    const isConnected = await this.checkAudioClientConnection(uuid);
                     if (!isConnected) {
-                        throw new Error('Client is not connected. Please ensure the client is running and authorized.');
+                        throw new Error('Audio client is not connected. Please ensure the client is running and authorized.');
                     }
 
-                    // Store UUID and redirect to view page
+                    // Store UUID and redirect to audio call page
                     sessionStorage.setItem('clientUUID', uuid);
                     window.location.href = '/view.html';
                     
@@ -247,13 +290,18 @@
                 return uuidRegex.test(uuid.replace(/\s/g, ''));
             }
 
-            async checkClientConnection(uuid) {
+            async checkAudioClientConnection(uuid) {
                 try {
                     const response = await fetch(`/api/status/${encodeURIComponent(uuid)}`);
                     const status = await response.json();
-                    return status.client_connected;
+                    
+                    console.log('Audio client status:', status);
+                    
+                    // Check for audio_client_connected instead of client_connected
+                    return status.audio_client_connected === true;
+                    
                 } catch (error) {
-                    console.error('Error checking client connection:', error);
+                    console.error('Error checking audio client connection:', error);
                     return false;
                 }
             }
@@ -281,7 +329,7 @@
 
         // Initialize the connector when page loads
         document.addEventListener('DOMContentLoaded', () => {
-            new RemoteDesktopConnector();
+            new AudioCallConnector();
         });
     </script>
 </body>

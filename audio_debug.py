@@ -1,255 +1,192 @@
 #!/usr/bin/env python3
 """
-Audio Debug Script - Run this on the CLIENT machine to fix audio capture
+Microphone Permission Test - Run this on CLIENT machine
+Tests microphone access and Windows privacy settings
 """
 
 import pyaudio
+import numpy as np
 import time
 import subprocess
-import sys
 
-def check_windows_audio_settings():
-    """Check Windows audio settings"""
-    print("=== WINDOWS AUDIO SETTINGS CHECK ===")
+def check_windows_microphone_privacy():
+    """Check Windows microphone privacy settings"""
+    print("🔐 Checking Windows microphone privacy settings...")
     
     try:
-        # Check if Stereo Mix is available
+        # Check app microphone access
         result = subprocess.run([
             'powershell', '-Command',
-            "Get-WmiObject -Class Win32_SoundDevice | Select-Object Name, Status"
+            """
+            $mic = Get-WinUserPrivacySetting -SettingType Microphone
+            Write-Output "Microphone Access: $($mic.State)"
+            
+            $apps = Get-AppxPackage | Get-WinUserPrivacySetting -SettingType Microphone
+            Write-Output "Desktop Apps Microphone Access:"
+            Get-WinUserPrivacySetting -SettingType Microphone | Where-Object {$_.AppDisplayName -eq $null} | ForEach-Object {
+                Write-Output "  Desktop Apps: $($_.State)"
+            }
+            """
         ], capture_output=True, text=True, timeout=10)
         
-        if result.returncode == 0:
-            print("Audio devices found:")
-            print(result.stdout)
+        print("Windows Privacy Settings:")
+        print(result.stdout)
+        
+        if "Denied" in result.stdout:
+            print("❌ MICROPHONE ACCESS DENIED IN WINDOWS PRIVACY SETTINGS")
+            print("🔧 TO FIX:")
+            print("   1. Press Win + I")
+            print("   2. Go to Privacy & Security → Microphone")
+            print("   3. Turn ON 'Let apps access your microphone'")
+            print("   4. Turn ON 'Let desktop apps access your microphone'")
+            return False
+        elif "Allowed" in result.stdout:
+            print("✅ Windows microphone privacy settings are correct")
+            return True
         else:
-            print("Could not query audio devices via PowerShell")
-    except:
-        print("PowerShell query failed, checking manually...")
+            print("❓ Could not determine privacy settings")
+            return True
+            
+    except Exception as e:
+        print(f"⚠ Could not check privacy settings: {e}")
+        return True
 
-def list_detailed_audio_devices():
-    """List all audio devices with detailed info"""
-    print("\n=== DETAILED AUDIO DEVICE LIST ===")
+def test_microphone_access():
+    """Test direct microphone access"""
+    print("\n🎤 Testing microphone access...")
     
     try:
         p = pyaudio.PyAudio()
         
-        print("INPUT DEVICES (what we can record from):")
-        print("-" * 50)
-        
-        input_devices = []
+        # List microphone devices
+        print("\nAvailable microphone devices:")
+        mic_devices = []
         for i in range(p.get_device_count()):
             info = p.get_device_info_by_index(i)
             if info['maxInputChannels'] > 0:
-                input_devices.append((i, info))
                 name = info['name']
-                channels = info['maxInputChannels']
-                rate = int(info['defaultSampleRate'])
-                
                 print(f"  [{i}] {name}")
-                print(f"      Channels: {channels}, Sample Rate: {rate} Hz")
-                
-                # Check for special devices
-                name_lower = name.lower()
-                if 'wasapi' in name_lower and 'loopback' in name_lower:
-                    print("      ★ WASAPI LOOPBACK - PERFECT for system audio!")
-                elif 'stereo mix' in name_lower:
-                    print("      ★ STEREO MIX - GOOD for system audio!")
-                elif 'what u hear' in name_lower:
-                    print("      ★ WHAT U HEAR - GOOD for system audio!")
-                elif 'microphone' in name_lower:
-                    print("      • Regular microphone")
-                elif 'line in' in name_lower:
-                    print("      • Line input")
-                else:
-                    print("      ? Unknown device type")
-                print()
+                if 'microphone' in name.lower():
+                    mic_devices.append((i, name))
         
-        print(f"\nTotal input devices found: {len(input_devices)}")
-        
-        if not input_devices:
-            print("❌ NO INPUT DEVICES FOUND!")
-            print("This is why you can't hear client audio.")
-            
-        p.terminate()
-        return input_devices
-        
-    except Exception as e:
-        print(f"Error listing devices: {e}")
-        return []
-
-def test_device_recording(device_index, device_name):
-    """Test recording from a specific device"""
-    print(f"\n=== TESTING DEVICE [{device_index}]: {device_name} ===")
-    
-    try:
-        p = pyaudio.PyAudio()
-        
-        # Try to open the device
-        stream = p.open(
-            format=pyaudio.paInt16,
-            channels=1,
-            rate=22050,
-            input=True,
-            input_device_index=device_index,
-            frames_per_buffer=2048
-        )
-        
-        print("✓ Device opened successfully")
-        print("Recording 3 seconds of audio... (play some music/sounds now)")
-        
-        # Record for 3 seconds
-        frames = []
-        for i in range(0, int(22050 / 2048 * 3)):
-            try:
-                data = stream.read(2048, exception_on_overflow=False)
-                frames.append(data)
-                if i % 10 == 0:
-                    print(".", end="", flush=True)
-            except Exception as e:
-                print(f"\nError reading from device: {e}")
-                break
-        
-        print("\n✓ Recording completed")
-        
-        # Analyze the audio
-        import numpy as np
-        audio_data = b''.join(frames)
-        audio_array = np.frombuffer(audio_data, dtype=np.int16)
-        max_volume = np.max(np.abs(audio_array))
-        avg_volume = np.mean(np.abs(audio_array))
-        
-        print(f"Audio Analysis:")
-        print(f"  Max Volume: {max_volume}")
-        print(f"  Avg Volume: {avg_volume}")
-        
-        if max_volume > 5000:
-            print("  ✓ STRONG AUDIO SIGNAL - This device is working!")
-            return True
-        elif max_volume > 1000:
-            print("  ⚠ WEAK AUDIO SIGNAL - Device works but might be quiet")
-            return True
-        else:
-            print("  ❌ NO AUDIO SIGNAL - Device not capturing audio")
+        if not mic_devices:
+            print("❌ No microphone devices found!")
             return False
         
-        stream.stop_stream()
-        stream.close()
+        # Test each microphone
+        for device_id, device_name in mic_devices:
+            print(f"\n🎤 Testing microphone [{device_id}]: {device_name}")
+            
+            try:
+                # Try to open microphone
+                stream = p.open(
+                    format=pyaudio.paInt16,
+                    channels=1,
+                    rate=16000,
+                    input=True,
+                    input_device_index=device_id,
+                    frames_per_buffer=1024
+                )
+                
+                print("✓ Microphone opened successfully")
+                print("🎤 Testing audio capture (speak now for 3 seconds)...")
+                
+                max_level = 0
+                for i in range(int(16000 / 1024 * 3)):  # 3 seconds
+                    try:
+                        data = stream.read(1024, exception_on_overflow=False)
+                        audio_array = np.frombuffer(data, dtype=np.int16)
+                        level = np.max(np.abs(audio_array))
+                        max_level = max(max_level, level)
+                        
+                        if i % 10 == 0:  # Print every ~0.6 seconds
+                            print(f"  Audio level: {level:5d} {'🎤' if level > 500 else '🔇'}")
+                            
+                    except Exception as e:
+                        print(f"  Read error: {e}")
+                        break
+                
+                stream.close()
+                
+                if max_level > 500:
+                    print(f"✅ MICROPHONE WORKING! Max level: {max_level}")
+                    print(f"✅ Device [{device_id}] can capture audio properly")
+                    p.terminate()
+                    return True
+                else:
+                    print(f"⚠ Microphone very quiet. Max level: {max_level}")
+                    print("   Check microphone volume or try speaking louder")
+                
+            except Exception as e:
+                print(f"❌ Failed to access microphone: {e}")
+                
+                if "Access is denied" in str(e) or "Unanticipated host error" in str(e):
+                    print("❌ MICROPHONE ACCESS DENIED!")
+                    print("   This is likely a Windows privacy setting issue")
+                    return False
+        
         p.terminate()
+        return False
         
     except Exception as e:
-        print(f"❌ Failed to test device: {e}")
+        print(f"❌ PyAudio error: {e}")
         return False
 
-def enable_stereo_mix_instructions():
-    """Show instructions to enable Stereo Mix"""
-    print("\n" + "="*60)
-    print("HOW TO ENABLE STEREO MIX (to hear client audio)")
-    print("="*60)
-    print("""
-1. Right-click the SPEAKER ICON in system tray
-2. Click "Open Sound settings"
-3. Scroll down and click "Sound Control Panel"
-4. Go to the "RECORDING" tab
-5. Right-click in empty space → "Show Disabled Devices"
-6. Look for "Stereo Mix" and right-click it
-7. Click "Enable"
-8. Right-click "Stereo Mix" again → "Set as Default Device"
-9. Click "OK" to close
-
-Alternative method:
-1. Right-click speaker icon → "Sounds"
-2. Recording tab → Right-click empty space
-3. "Show Disabled Devices" and "Show Disconnected Devices"
-4. Enable "Stereo Mix"
-
-If Stereo Mix is not available:
-- Your audio driver might not support it
-- Try updating your audio drivers (Realtek, etc.)
-- Or install VB-Cable (Virtual Audio Cable) software
-""")
-
-def suggest_solutions(working_devices):
-    """Suggest solutions based on test results"""
-    print("\n" + "="*60)
-    print("SOLUTIONS")
-    print("="*60)
+def fix_microphone_issues():
+    """Suggest fixes for microphone issues"""
+    print("\n🔧 MICROPHONE TROUBLESHOOTING GUIDE")
+    print("=" * 50)
     
-    if not working_devices:
-        print("❌ NO WORKING AUDIO CAPTURE DEVICES FOUND")
-        print("\nTo fix this:")
-        print("1. Enable Stereo Mix (see instructions above)")
-        print("2. Update your audio drivers")
-        print("3. Install VB-Cable virtual audio device")
-        print("4. Check Windows privacy settings for microphone access")
-        
-    else:
-        print("✓ WORKING DEVICES FOUND:")
-        for device_id, device_name in working_devices:
-            print(f"  [{device_id}] {device_name}")
-        
-        print(f"\nTo fix the client audio:")
-        print("1. Make sure client.py uses one of the working devices above")
-        print("2. The client should automatically detect these devices")
-        print("3. If still not working, manually specify device in client code")
+    print("\n1. CHECK WINDOWS PRIVACY SETTINGS:")
+    print("   • Press Win + I → Privacy & Security → Microphone")
+    print("   • Turn ON 'Let apps access your microphone'")
+    print("   • Turn ON 'Let desktop apps access your microphone'")
+    
+    print("\n2. CHECK MICROPHONE VOLUME:")
+    print("   • Right-click speaker icon → Open Sound settings")
+    print("   • Go to Input → Choose input device")
+    print("   • Test microphone and adjust volume")
+    
+    print("\n3. CHECK IF MICROPHONE IS IN USE:")
+    print("   • Close Zoom, Teams, Discord, or other apps using microphone")
+    print("   • Check Task Manager for audio applications")
+    
+    print("\n4. TRY RUNNING AS ADMINISTRATOR:")
+    print("   • Right-click Command Prompt → Run as administrator")
+    print("   • Navigate to your project folder")
+    print("   • Run: python client.py wss://192.168.48.53:5444/ws")
+    
+    print("\n5. UPDATE AUDIO DRIVERS:")
+    print("   • Device Manager → Audio inputs and outputs")
+    print("   • Right-click microphone → Update driver")
 
 def main():
-    print("CLIENT AUDIO DIAGNOSTIC TOOL")
-    print("=" * 40)
-    print("This will help fix the 'cant hear client audio' problem")
-    print()
+    print("🎤 MICROPHONE PERMISSION & ACCESS TEST")
+    print("=" * 50)
+    print("This will test if Python can access your microphone")
+    print("Run this on the CLIENT machine (where client.py runs)")
     
-    # Check Windows audio settings
-    check_windows_audio_settings()
+    # Check Windows privacy settings
+    privacy_ok = check_windows_microphone_privacy()
     
-    # List all devices
-    input_devices = list_detailed_audio_devices()
+    # Test microphone access
+    mic_ok = test_microphone_access()
     
-    if not input_devices:
-        enable_stereo_mix_instructions()
-        return
+    print("\n" + "=" * 50)
+    print("📋 TEST RESULTS:")
+    print(f"Windows Privacy Settings: {'✅ OK' if privacy_ok else '❌ DENIED'}")
+    print(f"Microphone Access: {'✅ WORKING' if mic_ok else '❌ FAILED'}")
     
-    # Test each potential system audio device
-    print("\n" + "="*60)
-    print("TESTING DEVICES FOR SYSTEM AUDIO CAPTURE")
-    print("="*60)
-    print("Play some music or sounds during these tests...")
-    
-    working_devices = []
-    
-    for device_id, device_info in input_devices:
-        name = device_info['name']
-        name_lower = name.lower()
-        
-        # Test devices that might capture system audio
-        if ('wasapi' in name_lower and 'loopback' in name_lower) or \
-           'stereo mix' in name_lower or \
-           'what u hear' in name_lower:
-            
-            print(f"\nTesting {name}...")
-            input("Press ENTER to start test (make sure music is playing)...")
-            
-            if test_device_recording(device_id, name):
-                working_devices.append((device_id, name))
-    
-    # Show solutions
-    suggest_solutions(working_devices)
-    
-    if working_devices:
-        print(f"\n✓ Found {len(working_devices)} working audio capture device(s)")
-        print("The client should now be able to capture system audio!")
+    if privacy_ok and mic_ok:
+        print("\n🎉 MICROPHONE IS WORKING!")
+        print("✅ Your audio client should be able to capture microphone audio")
+        print("✅ Two-way communication should work in call modes: Talk/Both")
     else:
-        print("\n❌ No working system audio capture found")
-        print("You need to enable Stereo Mix or install virtual audio software")
+        print("\n❌ MICROPHONE ACCESS PROBLEMS DETECTED")
+        fix_microphone_issues()
     
     print("\nPress ENTER to exit...")
     input()
 
 if __name__ == "__main__":
-    try:
-        main()
-    except KeyboardInterrupt:
-        print("\nTest cancelled by user")
-    except Exception as e:
-        print(f"Error: {e}")
-        input("Press ENTER to exit...")
+    main()
