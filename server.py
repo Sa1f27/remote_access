@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
-Remote Desktop Server - WebSocket and HTTP server
-Manages client connections, viewer sessions, and UUID validation
+Audio-Only Remote Call Server
+Handles only audio communication - no screen/keyboard/mouse
 """
 
 import asyncio
@@ -16,8 +16,8 @@ import aiohttp
 from aiohttp import web, WSMsgType
 import aiofiles
 
-class Logger:
-    def __init__(self, log_file="L_sys_log.txt"):
+class AudioCallLogger:
+    def __init__(self, log_file="audio_call_log.txt"):
         self.log_file = log_file
         self.setup_logging()
     
@@ -33,19 +33,27 @@ class Logger:
         self.logger = logging.getLogger(__name__)
     
     def log_client_connect(self, uuid, client_ip):
-        msg = f"CLIENT CONNECT - UUID: {uuid}, IP: {client_ip}"
+        msg = f"AUDIO CLIENT CONNECT - UUID: {uuid}, IP: {client_ip}"
         self.logger.info(msg)
     
     def log_client_disconnect(self, uuid, client_ip):
-        msg = f"CLIENT DISCONNECT - UUID: {uuid}, IP: {client_ip}"
+        msg = f"AUDIO CLIENT DISCONNECT - UUID: {uuid}, IP: {client_ip}"
         self.logger.info(msg)
     
     def log_viewer_connect(self, uuid, viewer_ip):
-        msg = f"VIEWER CONNECT - UUID: {uuid}, IP: {viewer_ip}"
+        msg = f"AUDIO VIEWER CONNECT - UUID: {uuid}, IP: {viewer_ip}"
         self.logger.info(msg)
     
     def log_viewer_disconnect(self, uuid, viewer_ip):
-        msg = f"VIEWER DISCONNECT - UUID: {uuid}, IP: {viewer_ip}"
+        msg = f"AUDIO VIEWER DISCONNECT - UUID: {uuid}, IP: {viewer_ip}"
+        self.logger.info(msg)
+    
+    def log_call_mode_change(self, uuid, mode):
+        msg = f"CALL MODE CHANGE - UUID: {uuid}, Mode: {mode}"
+        self.logger.info(msg)
+    
+    def log_audio_stats(self, uuid, system_audio_count, mic_audio_count):
+        msg = f"AUDIO STATS - UUID: {uuid}, System: {system_audio_count}, Mic: {mic_audio_count}"
         self.logger.info(msg)
     
     def log_error(self, error_msg):
@@ -64,126 +72,116 @@ class UUIDValidator:
                 with open(self.allowed_file, 'r') as f:
                     data = json.load(f)
                     self.allowed_uuids = set(data.get('allowed_uuids', []))
-                    print(f"Loaded {len(self.allowed_uuids)} allowed UUIDs")
+                    print(f"📋 Loaded {len(self.allowed_uuids)} allowed UUIDs")
             else:
-                # Create default allowed.json if it doesn't exist
+                # Create default allowed.json
                 default_data = {
                     "allowed_uuids": [
                         "EXAMPLE-UUID-1234-5678-9ABC",
-                        "EXAMPLE-UUID-ABCD-EFGH-IJKL"
+                        "YOUR-CLIENT-UUID-HERE"
                     ]
                 }
                 with open(self.allowed_file, 'w') as f:
                     json.dump(default_data, f, indent=2)
-                print(f"Created default {self.allowed_file} - Please add your client UUIDs")
+                print(f"📋 Created default {self.allowed_file} - Please add your client UUIDs")
                 
         except Exception as e:
-            print(f"Error loading allowed UUIDs: {e}")
+            print(f"❌ Error loading allowed UUIDs: {e}")
             self.allowed_uuids = set()
     
     def is_allowed(self, uuid):
         """Check if UUID is allowed to connect"""
         return uuid in self.allowed_uuids
-    
-    def add_uuid(self, uuid):
-        """Add UUID to allowed list"""
-        self.allowed_uuids.add(uuid)
-        self.save_allowed_uuids()
-    
-    def save_allowed_uuids(self):
-        """Save allowed UUIDs to file"""
-        try:
-            data = {"allowed_uuids": list(self.allowed_uuids)}
-            with open(self.allowed_file, 'w') as f:
-                json.dump(data, f, indent=2)
-        except Exception as e:
-            print(f"Error saving allowed UUIDs: {e}")
 
-class ConnectionManager:
+class AudioCallManager:
     def __init__(self):
-        self.clients = {}  # uuid -> {'ws': websocket, 'ip': ip, 'last_seen': timestamp}
-        self.viewers = {}  # uuid -> {'ws': websocket, 'ip': ip, 'last_seen': timestamp}
-        self.client_stats = {}  # uuid -> {'latency': ms, 'fps': fps}
+        self.audio_clients = {}  # uuid -> {'ws': websocket, 'ip': ip, 'connected_at': time}
+        self.audio_viewers = {}  # uuid -> {'ws': websocket, 'ip': ip, 'connected_at': time}
+        self.call_modes = {}     # uuid -> call_mode (off, listen, talk, both)
+        self.ping_times = {}     # uuid -> last_ping_time
+        self.audio_stats = {}    # uuid -> {'system_audio': count, 'mic_audio': count}
     
-    def add_client(self, uuid, websocket, client_ip):
-        """Add client connection"""
-        self.clients[uuid] = {
+    def add_audio_client(self, uuid, websocket, client_ip):
+        """Add audio client connection"""
+        self.audio_clients[uuid] = {
             'ws': websocket,
             'ip': client_ip,
-            'last_seen': time.time(),
             'connected_at': time.time()
         }
-        self.client_stats[uuid] = {
-            'latency': 0,
-            'fps': 0,
-            'last_frame_time': time.time()
-        }
+        self.call_modes[uuid] = 'off'
+        self.audio_stats[uuid] = {'system_audio': 0, 'mic_audio': 0}
     
-    def add_viewer(self, uuid, websocket, viewer_ip):
-        """Add viewer connection"""
-        self.viewers[uuid] = {
+    def add_audio_viewer(self, uuid, websocket, viewer_ip):
+        """Add audio viewer connection"""
+        self.audio_viewers[uuid] = {
             'ws': websocket,
             'ip': viewer_ip,
-            'last_seen': time.time(),
             'connected_at': time.time()
         }
     
-    def remove_client(self, uuid):
-        """Remove client connection"""
-        if uuid in self.clients:
-            del self.clients[uuid]
-        if uuid in self.client_stats:
-            del self.client_stats[uuid]
+    def remove_audio_client(self, uuid):
+        """Remove audio client connection"""
+        if uuid in self.audio_clients:
+            del self.audio_clients[uuid]
+        if uuid in self.call_modes:
+            del self.call_modes[uuid]
+        if uuid in self.ping_times:
+            del self.ping_times[uuid]
+        if uuid in self.audio_stats:
+            del self.audio_stats[uuid]
     
-    def remove_viewer(self, uuid):
-        """Remove viewer connection"""
-        if uuid in self.viewers:
-            del self.viewers[uuid]
+    def remove_audio_viewer(self, uuid):
+        """Remove audio viewer connection"""
+        if uuid in self.audio_viewers:
+            del self.audio_viewers[uuid]
     
-    def get_client(self, uuid):
-        """Get client connection by UUID"""
-        return self.clients.get(uuid)
+    def get_audio_client(self, uuid):
+        """Get audio client connection by UUID"""
+        return self.audio_clients.get(uuid)
     
-    def get_viewer(self, uuid):
-        """Get viewer connection by UUID"""
-        return self.viewers.get(uuid)
+    def get_audio_viewer(self, uuid):
+        """Get audio viewer connection by UUID"""
+        return self.audio_viewers.get(uuid)
     
-    def update_client_stats(self, uuid, screen_timestamp):
-        """Update client statistics"""
-        if uuid in self.client_stats:
-            current_time = time.time()
-            latency = (current_time - screen_timestamp) * 1000  # ms
-            
-            stats = self.client_stats[uuid]
-            stats['latency'] = latency
-            
-            # Calculate FPS
-            frame_interval = current_time - stats['last_frame_time']
-            if frame_interval > 0:
-                stats['fps'] = 1.0 / frame_interval
-            stats['last_frame_time'] = current_time
+    def set_call_mode(self, uuid, mode):
+        """Set call mode for a UUID"""
+        self.call_modes[uuid] = mode
+    
+    def get_call_mode(self, uuid):
+        """Get current call mode for a UUID"""
+        return self.call_modes.get(uuid, 'off')
+    
+    def update_ping(self, uuid):
+        """Update last ping time"""
+        self.ping_times[uuid] = time.time()
+    
+    def update_audio_stats(self, uuid, audio_type):
+        """Update audio statistics"""
+        if uuid in self.audio_stats:
+            self.audio_stats[uuid][audio_type] += 1
     
     def get_connection_status(self, uuid):
         """Get connection status for UUID"""
-        client = self.clients.get(uuid)
-        viewer = self.viewers.get(uuid)
-        stats = self.client_stats.get(uuid, {})
+        client = self.audio_clients.get(uuid)
+        viewer = self.audio_viewers.get(uuid)
+        stats = self.audio_stats.get(uuid, {})
         
         return {
-            'client_connected': client is not None,
-            'viewer_connected': viewer is not None,
+            'audio_client_connected': client is not None,
+            'audio_viewer_connected': viewer is not None,
             'client_ip': client['ip'] if client else None,
             'viewer_ip': viewer['ip'] if viewer else None,
-            'latency': stats.get('latency', 0),
-            'fps': stats.get('fps', 0),
+            'call_mode': self.get_call_mode(uuid),
+            'system_audio_count': stats.get('system_audio', 0),
+            'mic_audio_count': stats.get('mic_audio', 0),
             'uptime': time.time() - client['connected_at'] if client else 0
         }
 
-class RemoteDesktopServer:
+class AudioOnlyServer:
     def __init__(self):
-        self.logger = Logger()
+        self.logger = AudioCallLogger()
         self.uuid_validator = UUIDValidator()
-        self.connection_manager = ConnectionManager()
+        self.call_manager = AudioCallManager()
         self.app = web.Application()
         self.setup_routes()
     
@@ -192,7 +190,8 @@ class RemoteDesktopServer:
         self.app.router.add_get('/ws', self.websocket_handler)
         self.app.router.add_get('/', self.serve_landing_page)
         self.app.router.add_get('/land.html', self.serve_landing_page)
-        self.app.router.add_get('/view.html', self.serve_view_page)
+        self.app.router.add_get('/view.html', self.serve_audio_viewer)
+        self.app.router.add_get('/audio_call.html', self.serve_audio_viewer)
         self.app.router.add_get('/api/status/{uuid}', self.api_connection_status)
         self.app.router.add_static('/', path='static', name='static')
     
@@ -204,35 +203,23 @@ class RemoteDesktopServer:
         except FileNotFoundError:
             return web.Response(text="Landing page not found", status=404)
 
-
-
-    # async def serve_view_page(self, request):
-    #     try:
-    #         async with aiofiles.open('view.html', 'rb') as f:
-    #             content = await f.read()
-    #         return web.Response(body=content, content_type='text/html')
-    #     except FileNotFoundError:
-    #         return web.Response(text="View page not found", status=404)
-
-    async def serve_view_page(self, request):
+    async def serve_audio_viewer(self, request):
         try:
+            # Serve view.html (your audio-only viewer)
             async with aiofiles.open('view.html', 'rb') as f:
                 content = await f.read()
             return web.Response(body=content, content_type='text/html')
         except FileNotFoundError:
-            return web.Response(text="View page not found", status=404)
-
-
-
+            return web.Response(text="view.html not found - Please save the Audio-Only Remote Call Viewer as 'view.html'", status=404)
     
     async def api_connection_status(self, request):
         """API endpoint for connection status"""
         uuid = request.match_info['uuid']
-        status = self.connection_manager.get_connection_status(uuid)
+        status = self.call_manager.get_connection_status(uuid)
         return web.json_response(status)
     
     async def websocket_handler(self, request):
-        """Handle WebSocket connections"""
+        """Handle WebSocket connections - Audio Only"""
         ws = web.WebSocketResponse(heartbeat=30)
         await ws.prepare(request)
         
@@ -247,95 +234,108 @@ class RemoteDesktopServer:
                         data = json.loads(msg.data)
                         msg_type = data.get('type')
                         
-                        if msg_type == 'client_connect':
+                        if msg_type == 'audio_client_connect':
                             uuid = data.get('uuid')
                             if not self.uuid_validator.is_allowed(uuid):
                                 await ws.send_str(json.dumps({
                                     'type': 'error',
-                                    'message': 'UUID not authorized'
+                                    'message': 'UUID not authorized for audio calls'
                                 }))
                                 await ws.close()
                                 break
                             
-                            connection_type = 'client'
-                            self.connection_manager.add_client(uuid, ws, client_ip)
+                            connection_type = 'audio_client'
+                            self.call_manager.add_audio_client(uuid, ws, client_ip)
                             self.logger.log_client_connect(uuid, client_ip)
                             
                             await ws.send_str(json.dumps({
                                 'type': 'connected',
-                                'message': 'Client connected successfully'
+                                'message': 'Audio client connected successfully'
                             }))
                         
-                        elif msg_type == 'viewer_connect':
+                        elif msg_type == 'audio_viewer_connect':
                             uuid = data.get('uuid')
                             if not self.uuid_validator.is_allowed(uuid):
                                 await ws.send_str(json.dumps({
                                     'type': 'error',
-                                    'message': 'UUID not authorized'
+                                    'message': 'UUID not authorized for audio calls'
                                 }))
                                 await ws.close()
                                 break
                             
-                            connection_type = 'viewer'
-                            self.connection_manager.add_viewer(uuid, ws, client_ip)
+                            connection_type = 'audio_viewer'
+                            self.call_manager.add_audio_viewer(uuid, ws, client_ip)
                             self.logger.log_viewer_connect(uuid, client_ip)
                             
                             await ws.send_str(json.dumps({
                                 'type': 'connected',
-                                'message': 'Viewer connected successfully'
+                                'message': 'Audio viewer connected successfully'
                             }))
                         
-                        elif msg_type == 'screen_update':
-                            # Forward screen update to viewer
+                        elif msg_type == 'client_system_audio':
+                            # Client's system audio (Zoom, music, etc.) -> Forward to viewer
                             uuid = data.get('uuid')
-                            viewer = self.connection_manager.get_viewer(uuid)
+                            call_mode = self.call_manager.get_call_mode(uuid)
+                            
+                            if call_mode in ['listen', 'both']:
+                                viewer = self.call_manager.get_audio_viewer(uuid)
+                                if viewer:
+                                    await viewer['ws'].send_str(msg.data)
+                                    self.call_manager.update_audio_stats(uuid, 'system_audio')
+                        
+                        elif msg_type == 'client_microphone_audio':
+                            # Client's microphone -> Forward to viewer
+                            uuid = data.get('uuid')
+                            call_mode = self.call_manager.get_call_mode(uuid)
+                            
+                            if call_mode in ['both']:  # Only in both-way mode
+                                viewer = self.call_manager.get_audio_viewer(uuid)
+                                if viewer:
+                                    await viewer['ws'].send_str(msg.data)
+                                    self.call_manager.update_audio_stats(uuid, 'mic_audio')
+                        
+                        elif msg_type == 'viewer_audio':
+                            # Viewer's microphone -> Forward to client
+                            uuid = data.get('uuid')
+                            call_mode = self.call_manager.get_call_mode(uuid)
+                            
+                            if call_mode in ['talk', 'both']:
+                                client = self.call_manager.get_audio_client(uuid)
+                                if client:
+                                    await client['ws'].send_str(msg.data)
+                        
+                        elif msg_type == 'call_mode_change':
+                            # Update call mode and forward to client
+                            uuid = data.get('uuid')
+                            mode = data.get('mode', 'off')
+                            
+                            self.call_manager.set_call_mode(uuid, mode)
+                            self.logger.log_call_mode_change(uuid, mode)
+                            
+                            # Forward mode change to client
+                            client = self.call_manager.get_audio_client(uuid)
+                            if client:
+                                await client['ws'].send_str(msg.data)
+                        
+                        elif msg_type == 'ping_request':
+                            # Handle ping from viewer to client
+                            uuid = data.get('uuid')
+                            client = self.call_manager.get_audio_client(uuid)
+                            if client:
+                                await client['ws'].send_str(msg.data)
+                        
+                        elif msg_type == 'ping_response':
+                            # Handle ping response from client to viewer
+                            uuid = data.get('uuid')
+                            viewer = self.call_manager.get_audio_viewer(uuid)
                             if viewer:
                                 await viewer['ws'].send_str(msg.data)
                             
-                            # Update client statistics
-                            screen_timestamp = data.get('timestamp', time.time())
-                            self.connection_manager.update_client_stats(uuid, screen_timestamp)
+                            self.call_manager.update_ping(uuid)
                         
-                        elif msg_type == 'audio_update':
-                            # Forward audio update to viewer
-                            uuid = data.get('uuid')
-                            viewer = self.connection_manager.get_viewer(uuid)
-                            if viewer:
-                                await viewer['ws'].send_str(msg.data)
-                        
-                        elif msg_type == 'viewer_audio':
-                            # Forward viewer audio to client
-                            uuid = data.get('uuid')
-                            client = self.connection_manager.get_client(uuid)
-                            if client:
-                                await client['ws'].send_str(msg.data)
-                        
-                        elif msg_type == 'audio_mode_change':
-                            # Forward audio mode change to client
-                            uuid = data.get('uuid')
-                            client = self.connection_manager.get_client(uuid)
-                            if client:
-                                await client['ws'].send_str(msg.data)
-                        
-                        elif msg_type == 'mouse_event':
-                            # Forward mouse event to client
-                            uuid = data.get('uuid')
-                            client = self.connection_manager.get_client(uuid)
-                            if client:
-                                await client['ws'].send_str(msg.data)
-                        
-                        elif msg_type == 'keyboard_event':
-                            # Forward keyboard event to client
-                            uuid = data.get('uuid')
-                            client = self.connection_manager.get_client(uuid)
-                            if client:
-                                await client['ws'].send_str(msg.data)
-                        
-                        elif msg_type == 'ping':
-                            await ws.send_str(json.dumps({
-                                'type': 'pong',
-                                'timestamp': time.time()
-                            }))
+                        elif msg_type == 'disconnect':
+                            print(f"📞 Call ended for UUID: {uuid}")
+                            break
                     
                     except json.JSONDecodeError:
                         self.logger.log_error(f"Invalid JSON from {client_ip}")
@@ -349,11 +349,20 @@ class RemoteDesktopServer:
         
         finally:
             # Clean up connection
-            if connection_type == 'client' and uuid:
-                self.connection_manager.remove_client(uuid)
+            if connection_type == 'audio_client' and uuid:
+                # Log final audio stats
+                stats = self.call_manager.audio_stats.get(uuid, {})
+                self.logger.log_audio_stats(
+                    uuid, 
+                    stats.get('system_audio', 0), 
+                    stats.get('mic_audio', 0)
+                )
+                
+                self.call_manager.remove_audio_client(uuid)
                 self.logger.log_client_disconnect(uuid, client_ip)
-            elif connection_type == 'viewer' and uuid:
-                self.connection_manager.remove_viewer(uuid)
+                
+            elif connection_type == 'audio_viewer' and uuid:
+                self.call_manager.remove_audio_viewer(uuid)
                 self.logger.log_viewer_disconnect(uuid, client_ip)
         
         return ws
@@ -365,7 +374,7 @@ class RemoteDesktopServer:
         return ssl_context
     
     async def start_server(self, host='0.0.0.0', port=5444, cert_file=None, key_file=None):
-        """Start the server"""
+        """Start the audio-only server"""
         if cert_file and key_file:
             ssl_context = self.create_ssl_context(cert_file, key_file)
             scheme = "https"
@@ -381,34 +390,47 @@ class RemoteDesktopServer:
         site = web.TCPSite(runner, host, port, ssl_context=ssl_context)
         await site.start()
         
-        print(f"Remote Desktop Server started")
-        print(f"Web Interface: {scheme}://{host}:{port}")
-        print(f"WebSocket: {ws_scheme}://{host}:{port}/ws")
-        print(f"Allowed UUIDs: {len(self.uuid_validator.allowed_uuids)}")
+        print("📞" + "="*60)
+        print("   AUDIO-ONLY REMOTE CALL SERVER STARTED")
+        print("="*62)
+        print(f"🌐 Web Interface: {scheme}://{host}:{port}")
+        print(f"📡 WebSocket: {ws_scheme}://{host}:{port}/ws")
+        print(f"📋 Allowed UUIDs: {len(self.uuid_validator.allowed_uuids)}")
+        print(f"🎤 Features: System Audio + Microphone + Call Modes")
+        print(f"📊 Logs: audio_call_log.txt")
+        print("="*62)
+        print("🎵 CALL MODES:")
+        print("  • Off: No audio transmission")
+        print("  • Listen: Hear client's system audio (Zoom, music, etc.)")
+        print("  • Talk: Send your voice to client")
+        print("  • Both: Full two-way conversation")
+        print("="*62)
+        print("🚀 Ready for audio calls!")
         
         try:
             await asyncio.Future()  # Run forever
         except KeyboardInterrupt:
-            print("Server shutdown requested")
+            print("\n📞 Audio call server shutdown requested")
         finally:
             await runner.cleanup()
 
 def main():
     import argparse
-    # 192.168.48.201
-    parser = argparse.ArgumentParser(description='Remote Desktop Server')
-    parser.add_argument('--host', default='192.168.48.201', help='Host to bind to')
+    
+    parser = argparse.ArgumentParser(description='Audio-Only Remote Call Server')
+    parser.add_argument('--host', default='192.168.48.53', help='Host to bind to')
     parser.add_argument('--port', type=int, default=5444, help='Port to bind to')
     parser.add_argument('--cert', help='SSL certificate file')
     parser.add_argument('--key', help='SSL private key file')
     
     args = parser.parse_args()
     
-    server = RemoteDesktopServer()
+    server = AudioOnlyServer()
     
-    print("Starting Remote Desktop Server...")
-    print(f"Logs will be written to: L_sys_log.txt")
-    print(f"UUID validation file: allowed.json")
+    print("🎵 Starting Audio-Only Remote Call Server...")
+    print(f"📝 Call logs: audio_call_log.txt")
+    print(f"🔐 UUID validation: allowed.json")
+    print("🎯 No screen/keyboard/mouse - Pure audio communication!")
     
     asyncio.run(server.start_server(
         host=args.host,

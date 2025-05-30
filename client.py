@@ -1,7 +1,10 @@
 #!/usr/bin/env python3
 """
-Remote Desktop Client - Headless screen sharing and audio capture
-Captures screen and system audio, streams to server via WebSocket
+Audio-Only Remote Call Client
+- Captures system audio (music, Zoom meetings, etc.)
+- Captures microphone (client speaking)
+- Plays viewer's voice through speakers
+- No screen/keyboard/mouse access
 """
 
 import asyncio
@@ -12,267 +15,331 @@ import sys
 import time
 import threading
 import queue
-from base64 import b64encode
-from io import BytesIO
-
+from base64 import b64encode, b64decode
 import websockets
 import pyaudio
-import mss
 import numpy as np
-from PIL import Image
-import pynput
-from pynput import mouse, keyboard
 
-class AudioManager:
+class AudioOnlyManager:
     def __init__(self):
         self.p = pyaudio.PyAudio()
-        self.input_stream = None
-        self.output_stream = None
-        self.audio_queue = queue.Queue()
+        self.system_audio_stream = None   # For capturing system audio (Zoom, music, etc.)
+        self.mic_stream = None           # For capturing client microphone
+        self.speaker_stream = None       # For playing viewer's voice
+        
+        self.system_audio_queue = queue.Queue()
+        self.mic_audio_queue = queue.Queue()
         self.viewer_audio_queue = queue.Queue()
-        self.mixed_audio_queue = queue.Queue()
-        self.audio_mode = "client_only"  # client_only, viewer_only, merged
         self.running = False
         
-        # Audio settings for low latency
+        # Audio settings - optimized for voice calls
         self.format = pyaudio.paInt16
         self.channels = 1
-        self.rate = 44100
+        self.rate = 16000  # Lower rate for voice calls (better for network)
         self.chunk = 1024
         
-    def get_audio_devices(self):
-        devices = []
+        # Call modes: "off", "listen", "talk", "both"
+        self.call_mode = "off"
+        
+    def list_audio_devices(self):
+        """Debug function to list all audio devices"""
+        print("\n=== AUDIO DEVICES ===")
+        print("INPUT DEVICES (Microphones, System Audio):")
         for i in range(self.p.get_device_count()):
             info = self.p.get_device_info_by_index(i)
-            devices.append({
-                'index': i,
-                'name': info['name'],
-                'channels': info['maxInputChannels']
-            })
-        return devices
+            if info['maxInputChannels'] > 0:
+                name = info['name']
+                print(f"  [{i}] {name}")
+                if 'stereo mix' in name.lower() or 'wasapi' in name.lower() and 'loopback' in name.lower():
+                    print(f"      ★ SYSTEM AUDIO DEVICE")
+                elif 'microphone' in name.lower():
+                    print(f"      🎤 MICROPHONE DEVICE")
+        
+        print("\nOUTPUT DEVICES (Speakers, Headphones):")
+        for i in range(self.p.get_device_count()):
+            info = self.p.get_device_info_by_index(i)
+            if info['maxOutputChannels'] > 0:
+                name = info['name']
+                print(f"  [{i}] {name}")
+                if 'speaker' in name.lower() or 'headphone' in name.lower():
+                    print(f"      🔊 SPEAKER DEVICE")
+        print()
+    
+    def find_system_audio_device(self):
+        """Find the best device for capturing system audio"""
+        devices_to_try = []
+        
+        for i in range(self.p.get_device_count()):
+            info = self.p.get_device_info_by_index(i)
+            if info['maxInputChannels'] > 0:
+                name_lower = info['name'].lower()
+                
+                # Priority order for system audio capture
+                if 'wasapi' in name_lower and 'loopback' in name_lower:
+                    devices_to_try.insert(0, (i, info['name'], 'WASAPI'))  # Highest priority
+                elif 'stereo mix' in name_lower:
+                    devices_to_try.append((i, info['name'], 'Stereo Mix'))
+                elif 'what u hear' in name_lower:
+                    devices_to_try.append((i, info['name'], 'What U Hear'))
+        
+        # Test each device to see which one works
+        for device_id, device_name, device_type in devices_to_try:
+            try:
+                test_stream = self.p.open(
+                    format=self.format,
+                    channels=self.channels,
+                    rate=self.rate,
+                    input=True,
+                    input_device_index=device_id,
+                    frames_per_buffer=self.chunk
+                )
+                test_stream.close()
+                print(f"✓ Found working system audio device: [{device_id}] {device_name}")
+                return device_id
+            except Exception as e:
+                print(f"✗ Device [{device_id}] failed: {e}")
+        
+        print("❌ No working system audio device found!")
+        print("Please enable Stereo Mix or install virtual audio cable")
+        return None
+    
+    def find_microphone_device(self):
+        """Find the best microphone device"""
+        for i in range(self.p.get_device_count()):
+            info = self.p.get_device_info_by_index(i)
+            if info['maxInputChannels'] > 0:
+                name_lower = info['name'].lower()
+                if 'microphone' in name_lower and 'array' not in name_lower:
+                    try:
+                        test_stream = self.p.open(
+                            format=self.format,
+                            channels=self.channels,
+                            rate=self.rate,
+                            input=True,
+                            input_device_index=i,
+                            frames_per_buffer=self.chunk
+                        )
+                        test_stream.close()
+                        print(f"✓ Found microphone: [{i}] {info['name']}")
+                        return i
+                    except:
+                        continue
+        
+        print("⚠ Using default microphone")
+        return None  # Use default
+    
+    def find_speaker_device(self):
+        """Find the best speaker device"""
+        for i in range(self.p.get_device_count()):
+            info = self.p.get_device_info_by_index(i)
+            if info['maxOutputChannels'] > 0:
+                name_lower = info['name'].lower()
+                if ('speaker' in name_lower or 'headphone' in name_lower or 
+                    'realtek' in name_lower) and 'microphone' not in name_lower:
+                    try:
+                        test_stream = self.p.open(
+                            format=self.format,
+                            channels=self.channels,
+                            rate=self.rate,
+                            output=True,
+                            output_device_index=i,
+                            frames_per_buffer=self.chunk
+                        )
+                        test_stream.close()
+                        print(f"✓ Found speakers: [{i}] {info['name']}")
+                        return i
+                    except:
+                        continue
+        
+        print("⚠ Using default speakers")
+        return None  # Use default
     
     def start_system_audio_capture(self):
+        """Start capturing system audio (Zoom, music, etc.)"""
+        device_id = self.find_system_audio_device()
+        if device_id is None:
+            return False
+        
         try:
-            wasapi_info = None
-            for i in range(self.p.get_device_count()):
-                info = self.p.get_device_info_by_index(i)
-                name_lower = info['name'].lower()
-                # Look for WASAPI loopback device first
-                if "wasapi" in name_lower and "loopback" in name_lower:
-                    wasapi_info = info
-                    break
-            
-            if not wasapi_info:
-                # Fallback: look for Stereo Mix device
-                for i in range(self.p.get_device_count()):
-                    info = self.p.get_device_info_by_index(i)
-                    if "stereo mix" in info['name'].lower():
-                        wasapi_info = info
-                        break
-            
-            if not wasapi_info:
-                print("Warning: No WASAPI loopback or Stereo Mix device found, using default input")
-                device_index = None
-            else:
-                device_index = wasapi_info['index']
-            
-            self.input_stream = self.p.open(
+            self.system_audio_stream = self.p.open(
                 format=self.format,
                 channels=self.channels,
                 rate=self.rate,
                 input=True,
-                input_device_index=device_index,
-                frames_per_buffer=self.chunk,
-                stream_callback=self._audio_callback
+                input_device_index=device_id,
+                frames_per_buffer=self.chunk
             )
-            self.input_stream.start_stream()
-            print(f"Started system audio capture on device: {wasapi_info['name'] if wasapi_info else 'Default'}")
-            
+            print("✓ System audio capture started")
+            return True
         except Exception as e:
-            print(f"Error starting system audio capture: {e}")
-    def start_microphone_output(self):
-        """Output mixed audio to microphone (for WebCall injection)"""
+            print(f"✗ System audio capture failed: {e}")
+            return False
+    
+    def start_microphone_capture(self):
+        """Start capturing microphone"""
+        device_id = self.find_microphone_device()
+        
         try:
-            # Find default microphone output device
-            default_output = self.p.get_default_output_device_info()
-            
-            self.output_stream = self.p.open(
+            self.mic_stream = self.p.open(
+                format=self.format,
+                channels=self.channels,
+                rate=self.rate,
+                input=True,
+                input_device_index=device_id,
+                frames_per_buffer=self.chunk
+            )
+            print("✓ Microphone capture started")
+            return True
+        except Exception as e:
+            print(f"✗ Microphone capture failed: {e}")
+            return False
+    
+    def start_speaker_output(self):
+        """Start speaker output for viewer's voice"""
+        device_id = self.find_speaker_device()
+        
+        try:
+            self.speaker_stream = self.p.open(
                 format=self.format,
                 channels=self.channels,
                 rate=self.rate,
                 output=True,
-                output_device_index=default_output['index'],
+                output_device_index=device_id,
                 frames_per_buffer=self.chunk
             )
-            print(f"Started microphone output to: {default_output['name']}")
-            
+            print("✓ Speaker output started")
+            return True
         except Exception as e:
-            print(f"Error starting microphone output: {e}")
+            print(f"✗ Speaker output failed: {e}")
+            return False
     
-    def _audio_callback(self, in_data, frame_count, time_info, status):
-        """Callback for system audio capture"""
-        if self.running:
-            self.audio_queue.put(in_data)
-        return (None, pyaudio.paContinue)
+    def audio_capture_thread(self):
+        """Background thread to capture audio"""
+        while self.running:
+            try:
+                # Capture system audio (if in listen mode)
+                if (self.system_audio_stream and 
+                    self.call_mode in ["listen", "both"]):
+                    try:
+                        data = self.system_audio_stream.read(self.chunk, exception_on_overflow=False)
+                        
+                        # Check if there's actual audio
+                        audio_level = np.max(np.abs(np.frombuffer(data, dtype=np.int16)))
+                        if audio_level > 100:  # Only send if there's sound
+                            if self.system_audio_queue.qsize() < 10:  # Prevent buildup
+                                self.system_audio_queue.put(data)
+                    except Exception as e:
+                        print(f"System audio read error: {e}")
+                
+                # Capture microphone (if in talk mode)
+                if (self.mic_stream and 
+                    self.call_mode in ["talk", "both"]):
+                    try:
+                        data = self.mic_stream.read(self.chunk, exception_on_overflow=False)
+                        
+                        # Check if there's actual audio
+                        audio_level = np.max(np.abs(np.frombuffer(data, dtype=np.int16)))
+                        if audio_level > 200:  # Slightly higher threshold for mic
+                            if self.mic_audio_queue.qsize() < 10:  # Prevent buildup
+                                self.mic_audio_queue.put(data)
+                    except Exception as e:
+                        print(f"Microphone read error: {e}")
+                
+                # Play viewer audio
+                if not self.viewer_audio_queue.empty() and self.speaker_stream:
+                    try:
+                        viewer_audio = self.viewer_audio_queue.get_nowait()
+                        self.speaker_stream.write(viewer_audio)
+                    except queue.Empty:
+                        pass
+                    except Exception as e:
+                        print(f"Speaker output error: {e}")
+                
+                time.sleep(0.01)  # Small delay
+                
+            except Exception as e:
+                print(f"Audio thread error: {e}")
+                time.sleep(0.1)
+    
+    def set_call_mode(self, mode):
+        """Set call mode: off, listen, talk, both"""
+        self.call_mode = mode
+        print(f"📞 Call mode: {mode}")
     
     def add_viewer_audio(self, audio_data):
-        if self.viewer_audio_queue.qsize() > 20:
+        """Add viewer's voice to playback queue"""
+        if self.viewer_audio_queue.qsize() < 15:  # Prevent buildup
+            self.viewer_audio_queue.put(audio_data)
+    
+    def get_system_audio(self):
+        """Get system audio for sending to viewer"""
+        if not self.system_audio_queue.empty():
             try:
-                self.viewer_audio_queue.get_nowait()  # drop oldest
+                return self.system_audio_queue.get_nowait()
             except queue.Empty:
                 pass
-        print(f"Adding viewer audio of size {len(audio_data)} bytes to queue")
-        print()
-        self.viewer_audio_queue.put(audio_data)
-
+        return None
     
-    def set_audio_mode(self, mode):
-        """Set audio routing mode"""
-        self.audio_mode = mode
-        print(f"Audio mode changed to: {mode}")
-    
-    def start_audio_mixer(self):
-        def mixer_thread():
-            while self.running:
-                try:
-                    mixed_audio = None
-                    
-                    if self.audio_mode == "client_only":
-                        # Only system audio
-                        if not self.audio_queue.empty():
-                            system_audio = self.audio_queue.get_nowait()
-                            mixed_audio = system_audio
-                    
-                    elif self.audio_mode == "viewer_only":
-                        # Only viewer audio
-                        if not self.viewer_audio_queue.empty():
-                            viewer_audio = self.viewer_audio_queue.get_nowait()
-                            mixed_audio = viewer_audio
-                    
-                    elif self.audio_mode == "merged":
-                        system_audio = None
-                        viewer_audio = None
-                        
-                        if not self.audio_queue.empty():
-                            system_audio = self.audio_queue.get_nowait()
-                        if not self.viewer_audio_queue.empty():
-                            viewer_audio = self.viewer_audio_queue.get_nowait()
-                        
-                        if system_audio and viewer_audio:
-                            sys_np = np.frombuffer(system_audio, dtype=np.int16)
-                            viewer_np = np.frombuffer(viewer_audio, dtype=np.int16)
-                            min_len = min(len(sys_np), len(viewer_np))
-                            mixed_np = (sys_np[:min_len] * 0.5 + viewer_np[:min_len] * 0.5).astype(np.int16)
-                            mixed_audio = mixed_np.tobytes()
-                        elif viewer_audio:
-                            mixed_audio = viewer_audio
-                        elif system_audio:
-                            mixed_audio = system_audio
-                    
-                    if mixed_audio and self.output_stream:
-                        self.output_stream.write(mixed_audio)
-                        print(f"Playing audio chunk of size {len(mixed_audio)} bytes")
-                    else:
-                        # To avoid blocking if no audio, sleep a bit
-                        time.sleep(0.005)
-                    
-                except queue.Empty:
-                    time.sleep(0.005)
-                    continue
-                except Exception as e:
-                    print(f"Audio mixer error: {e}")
-                    time.sleep(0.01)
-        
-        threading.Thread(target=mixer_thread, daemon=True).start()
-
+    def get_microphone_audio(self):
+        """Get microphone audio for sending to viewer"""
+        if not self.mic_audio_queue.empty():
+            try:
+                return self.mic_audio_queue.get_nowait()
+            except queue.Empty:
+                pass
+        return None
     
     def start(self):
+        """Start the audio system"""
         self.running = True
-        self.start_system_audio_capture()
-        self.start_microphone_output()
-        self.start_audio_mixer()
+        
+        print("🎵 Starting Audio-Only Remote Call System")
+        self.list_audio_devices()
+        
+        success = True
+        success &= self.start_system_audio_capture()
+        success &= self.start_microphone_capture()
+        success &= self.start_speaker_output()
+        
+        if success:
+            # Start background audio thread
+            threading.Thread(target=self.audio_capture_thread, daemon=True).start()
+            print("✅ Audio system ready for calls!")
+        else:
+            print("❌ Audio system failed to start completely")
+        
+        return success
     
     def stop(self):
+        """Stop the audio system"""
         self.running = False
-        if self.input_stream:
-            self.input_stream.stop_stream()
-            self.input_stream.close()
-        if self.output_stream:
-            self.output_stream.stop_stream()
-            self.output_stream.close()
+        
+        if self.system_audio_stream:
+            self.system_audio_stream.stop_stream()
+            self.system_audio_stream.close()
+        if self.mic_stream:
+            self.mic_stream.stop_stream()
+            self.mic_stream.close()
+        if self.speaker_stream:
+            self.speaker_stream.stop_stream()
+            self.speaker_stream.close()
+        
         self.p.terminate()
+        print("🔇 Audio system stopped")
 
-class ScreenCapture:
-    def __init__(self):
-        self.sct = mss.mss()
-        self.monitor = self.sct.monitors[1]  # Primary monitor
-        
-    def capture_screen(self, quality=85):
-        """Capture screen and return compressed JPEG data"""
-        try:
-            screenshot = self.sct.grab(self.monitor)
-            img = Image.frombytes("RGB", screenshot.size, screenshot.bgra, "raw", "BGRX")
-            
-            # Compress image
-            buffer = BytesIO()
-            img.save(buffer, format="JPEG", quality=quality, optimize=True)
-            buffer.seek(0)
-            
-            return b64encode(buffer.getvalue()).decode('utf-8')
-        except Exception as e:
-            print(f"Screen capture error: {e}")
-            return None
-
-class InputController:
-    def __init__(self):
-        self.mouse_controller = pynput.mouse.Controller()
-        self.keyboard_controller = pynput.keyboard.Controller()
-        
-    def handle_mouse_event(self, event_data):
-        """Handle mouse events from viewer"""
-        try:
-            event_type = event_data.get('type')
-            x = event_data.get('x', 0)
-            y = event_data.get('y', 0)
-            
-            if event_type == 'move':
-                self.mouse_controller.position = (x, y)
-            elif event_type == 'click':
-                button = mouse.Button.left if event_data.get('button') == 'left' else mouse.Button.right
-                self.mouse_controller.click(button)
-            elif event_type == 'scroll':
-                dx = event_data.get('dx', 0)
-                dy = event_data.get('dy', 0)
-                self.mouse_controller.scroll(dx, dy)
-                
-        except Exception as e:
-            print(f"Mouse event error: {e}")
-    
-    def handle_keyboard_event(self, event_data):
-        """Handle keyboard events from viewer"""
-        try:
-            event_type = event_data.get('type')
-            key = event_data.get('key')
-            
-            if event_type == 'press':
-                self.keyboard_controller.press(key)
-            elif event_type == 'release':
-                self.keyboard_controller.release(key)
-                
-        except Exception as e:
-            print(f"Keyboard event error: {e}")
-
-class RemoteDesktopClient:
+class AudioCallClient:
     def __init__(self):
         self.uuid = self.get_system_uuid()
         self.websocket = None
         self.running = False
-        self.audio_manager = AudioManager()
-        self.screen_capture = ScreenCapture()
-        self.input_controller = InputController()
+        self.audio_manager = AudioOnlyManager()
+        
+        # Ping monitoring
+        self.last_ping_time = 0
+        self.ping_ms = 0
         
     def get_system_uuid(self):
-        """Get system UUID using wmic command"""
+        """Get system UUID"""
         try:
             result = subprocess.run(
                 ['wmic', 'csproduct', 'get', 'uuid'],
@@ -290,7 +357,7 @@ class RemoteDesktopClient:
             return "UNKNOWN-UUID"
     
     async def connect_to_server(self, server_url):
-        """Connect to the remote desktop server"""
+        """Connect to the server"""
         ssl_context = ssl.create_default_context()
         ssl_context.check_hostname = False
         ssl_context.verify_mode = ssl.CERT_NONE
@@ -299,21 +366,21 @@ class RemoteDesktopClient:
             self.websocket = await websockets.connect(
                 server_url,
                 ssl=ssl_context,
-                ping_interval=30,
+                ping_interval=20,
                 ping_timeout=10
             )
             
-            # Send initial connection with UUID
             await self.websocket.send(json.dumps({
-                'type': 'client_connect',
-                'uuid': self.uuid
+                'type': 'audio_client_connect',
+                'uuid': self.uuid,
+                'client_type': 'audio_only'
             }))
             
-            print(f"Connected to server with UUID: {self.uuid}")
+            print(f"📡 Connected to server with UUID: {self.uuid}")
             return True
             
         except Exception as e:
-            print(f"Connection error: {e}")
+            print(f"❌ Connection error: {e}")
             return False
     
     async def handle_messages(self):
@@ -323,78 +390,83 @@ class RemoteDesktopClient:
                 data = json.loads(message)
                 msg_type = data.get('type')
                 
-                if msg_type == 'audio_mode_change':
-                    self.audio_manager.set_audio_mode(data.get('mode'))
+                if msg_type == 'call_mode_change':
+                    mode = data.get('mode', 'off')
+                    self.audio_manager.set_call_mode(mode)
                 
                 elif msg_type == 'viewer_audio':
-                    # Decode and add viewer audio to mixer
-                    import base64
-                    audio_data = base64.b64decode(data.get('audio'))
-                    self.audio_manager.add_viewer_audio(audio_data)
+                    # Viewer's voice -> play through client speakers
+                    try:
+                        audio_data = b64decode(data.get('audio'))
+                        self.audio_manager.add_viewer_audio(audio_data)
+                    except Exception as e:
+                        print(f"Error processing viewer audio: {e}")
                 
-                elif msg_type == 'mouse_event':
-                    self.input_controller.handle_mouse_event(data.get('event'))
-                
-                elif msg_type == 'keyboard_event':
-                    self.input_controller.handle_keyboard_event(data.get('event'))
+                elif msg_type == 'ping_request':
+                    # Respond to ping
+                    await self.websocket.send(json.dumps({
+                        'type': 'ping_response',
+                        'uuid': self.uuid,
+                        'timestamp': data.get('timestamp')
+                    }))
                 
                 elif msg_type == 'disconnect':
-                    print("Server requested disconnect")
+                    print("📞 Call ended by viewer")
                     break
                     
         except websockets.exceptions.ConnectionClosed:
-            print("Connection to server lost")
+            print("📞 Connection to server lost")
         except Exception as e:
-            print(f"Message handling error: {e}")
-    
-    async def send_screen_updates(self):
-        """Send screen updates to server"""
-        frame_time = 1.0 / 25  # 25 FPS
-        
-        while self.running and self.websocket:
-            try:
-                start_time = time.time()
-                
-                # Capture and send screen
-                screen_data = self.screen_capture.capture_screen()
-                if screen_data:
-                    await self.websocket.send(json.dumps({
-                        'type': 'screen_update',
-                        'uuid': self.uuid,
-                        'screen': screen_data,
-                        'timestamp': time.time()
-                    }))
-                
-                # Maintain frame rate
-                elapsed = time.time() - start_time
-                sleep_time = max(0, frame_time - elapsed)
-                await asyncio.sleep(sleep_time)
-                
-            except Exception as e:
-                print(f"Screen update error: {e}")
-                break
+            print(f"❌ Message handling error: {e}")
     
     async def send_audio_updates(self):
-        """Send system audio to server"""
+        """Send audio to viewer"""
         while self.running and self.websocket:
             try:
-                if not self.audio_manager.audio_queue.empty():
-                    audio_data = self.audio_manager.audio_queue.get_nowait()
-                    audio_b64 = b64encode(audio_data).decode('utf-8')
-                    
+                # Send system audio (Zoom meeting, music, etc.)
+                system_audio = self.audio_manager.get_system_audio()
+                if system_audio:
+                    audio_b64 = b64encode(system_audio).decode('utf-8')
                     await self.websocket.send(json.dumps({
-                        'type': 'audio_update',
+                        'type': 'client_system_audio',
                         'uuid': self.uuid,
                         'audio': audio_b64,
                         'timestamp': time.time()
                     }))
                 
-                await asyncio.sleep(0.02)  # 50Hz audio updates
+                # Send microphone audio (client speaking)
+                mic_audio = self.audio_manager.get_microphone_audio()
+                if mic_audio:
+                    audio_b64 = b64encode(mic_audio).decode('utf-8')
+                    await self.websocket.send(json.dumps({
+                        'type': 'client_microphone_audio',
+                        'uuid': self.uuid,
+                        'audio': audio_b64,
+                        'timestamp': time.time()
+                    }))
                 
-            except queue.Empty:
-                await asyncio.sleep(0.01)
+                await asyncio.sleep(0.03)  # ~33Hz audio updates
+                
             except Exception as e:
-                print(f"Audio update error: {e}")
+                print(f"❌ Audio update error: {e}")
+                break
+    
+    async def ping_monitor(self):
+        """Monitor connection ping"""
+        while self.running and self.websocket:
+            try:
+                # Send ping request
+                ping_time = time.time()
+                await self.websocket.send(json.dumps({
+                    'type': 'ping_request',
+                    'uuid': self.uuid,
+                    'timestamp': ping_time
+                }))
+                
+                await asyncio.sleep(5)  # Ping every 5 seconds
+                
+            except Exception as e:
+                print(f"❌ Ping error: {e}")
                 break
     
     async def run(self, server_url):
@@ -403,17 +475,32 @@ class RemoteDesktopClient:
             return
         
         self.running = True
-        self.audio_manager.start()
+        
+        # Start audio system
+        if not self.audio_manager.start():
+            print("⚠ Audio system failed to start completely")
+            print("Some features may not work")
+        
+        print("\n📞 AUDIO-ONLY REMOTE CALL CLIENT READY")
+        print("=====================================")
+        print("Features:")
+        print("• System Audio Capture (Zoom meetings, music, etc.)")
+        print("• Microphone Capture (your voice)")
+        print("• Speaker Output (viewer's voice)")
+        print("• Call modes: Off/Listen/Talk/Both")
+        print("• Real-time ping monitoring")
+        print("\nWaiting for viewer to connect...")
+        print("Press Ctrl+C to stop")
+        print("=====================================")
         
         try:
-            # Run all tasks concurrently
             await asyncio.gather(
                 self.handle_messages(),
-                self.send_screen_updates(),
-                self.send_audio_updates()
+                self.send_audio_updates(),
+                self.ping_monitor()
             )
         except KeyboardInterrupt:
-            print("Client shutdown requested")
+            print("\n📞 Call ended by client")
         finally:
             self.running = False
             self.audio_manager.stop()
@@ -422,16 +509,18 @@ class RemoteDesktopClient:
 
 async def main():
     if len(sys.argv) < 2:
-        print("Usage: python client.py <server_wss_url>")
-        print("Example: python client.py wss://your-server.com:5444/ws")
+        print("Usage: python audio_client.py <server_wss_url>")
+        print("Example: python audio_client.py wss://192.168.48.53:5444/ws")
         return
     
     server_url = sys.argv[1]
-    client = RemoteDesktopClient()
+    client = AudioCallClient()
     
-    print(f"Starting Remote Desktop Client")
+    print("📞 AUDIO-ONLY REMOTE CALL CLIENT")
+    print("================================")
     print(f"System UUID: {client.uuid}")
     print(f"Connecting to: {server_url}")
+    print("No screen/keyboard/mouse access - Audio only!")
     
     await client.run(server_url)
 

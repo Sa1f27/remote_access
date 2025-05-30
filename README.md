@@ -258,6 +258,241 @@ For technical issues:
 3. Test with simplified configuration
 4. Review system requirements
 
-## License
 
-This project is provided as-is for educational and internal use purposes.
+# Troubleshoot
+
+# Simple Call-Like Remote Desktop - Setup Guide
+
+## What Changed (No More Alien Voice!)
+
+✅ **Fixed audio quality**: Removed complex processing that was causing distortion  
+✅ **Two-way audio**: Client microphone now properly reaches viewer  
+✅ **Call-like controls**: Simple buttons for different audio modes  
+✅ **Cleaner code**: Much simpler, more reliable audio handling  
+
+## Audio Modes
+
+| Mode | Description | Use Case |
+|------|-------------|----------|
+| **🔇 Audio Off** | No audio transmission | Silent monitoring |
+| **🔊 Listen Only** | Hear client's computer audio + mic | Listen to what's happening |
+| **🎤 Talk Only** | Your microphone goes to client | Give instructions |
+| **📞 Both Ways** | Full two-way communication | Phone call experience |
+
+## Quick Setup
+
+### 1. Replace Files
+Replace your existing files with the new versions:
+- `client.py` → Simple Call-Like Audio Client
+- `view.html` → Simple Call-Like Viewer  
+- `server.py` → Updated Server for Call-Like Audio
+
+### 2. Install Dependencies
+```bash
+pip install -r requirements.txt
+```
+
+### 3. Check Your UUID
+```bash
+# Get your client machine's UUID
+wmic csproduct get uuid
+```
+
+### 4. Update allowed.json
+Add your UUID to `allowed.json`:
+```json
+{
+  "allowed_uuids": [
+    "YOUR-ACTUAL-UUID-HERE"
+  ]
+}
+```
+
+### 5. Start Server
+```bash
+python server.py --cert server.crt --key server.key
+```
+
+### 6. Start Client
+```bash
+python client.py wss://192.168.48.53:5444/ws
+```
+
+### 7. Open Viewer
+Go to: `https://192.168.48.53:5444`
+
+## Testing Audio
+
+### Step 1: Test "Listen Only" Mode
+1. Click **🔊 Listen Only** in viewer
+2. Play music on client computer
+3. You should hear the music clearly (no alien voice!)
+
+### Step 2: Test "Talk Only" Mode  
+1. Click **🎤 Talk Only** in viewer
+2. Allow microphone permission when prompted
+3. Speak into your microphone
+4. You should hear your voice from client computer speakers
+
+### Step 3: Test "Both Ways" Mode
+1. Click **📞 Both Ways** in viewer
+2. Now you can hear client AND talk to client
+3. Like a phone call!
+
+## Troubleshooting
+
+### "No system audio from client"
+```bash
+# Check if Stereo Mix is enabled on client computer
+1. Right-click sound icon → Recording devices
+2. Right-click empty space → Show disabled devices  
+3. Enable "Stereo Mix" if available
+4. Set as default recording device
+```
+
+### "Microphone permission denied"
+1. Click the 🔒 lock icon in browser address bar
+2. Allow microphone access
+3. Refresh the page
+4. Try audio mode again
+
+### "Audio is choppy"
+- Lower the screen quality in client code
+- Check network connection
+- Close other applications using audio
+
+### "Can't hear viewer audio on client"
+The client will automatically detect speakers. If not working:
+```python
+# In client.py, add debug to see audio devices:
+audio_manager.list_audio_devices()
+```
+
+## Debug Commands
+
+### Check Client Audio Devices
+```bash
+python -c "
+import pyaudio
+p = pyaudio.PyAudio()
+print('=== INPUT DEVICES ===')
+for i in range(p.get_device_count()):
+    info = p.get_device_info_by_index(i)
+    if info['maxInputChannels'] > 0:
+        print(f'{i}: {info[\"name\"]}')
+
+print('\n=== OUTPUT DEVICES ===')        
+for i in range(p.get_device_count()):
+    info = p.get_device_info_by_index(i)
+    if info['maxOutputChannels'] > 0:
+        print(f'{i}: {info[\"name\"]}')
+"
+```
+
+### Test Network Connection
+```bash
+# Test if client can reach server
+telnet 192.168.48.53 5444
+```
+
+### Check Server Logs
+```bash
+# Watch server logs in real-time
+tail -f L_sys_log.txt
+```
+
+## Browser Requirements
+
+### Microphone Support
+- ✅ Chrome/Edge: Full support
+- ✅ Firefox: Full support  
+- ⚠️ Safari: Limited support
+- ❌ Internet Explorer: Not supported
+
+### Required Permissions
+- **Microphone**: For talk modes
+- **Autoplay**: For audio playback
+- **Fullscreen**: For immersive mode
+
+## Performance Tips
+
+### If Audio is Lagging
+1. Reduce screen frame rate in client:
+   ```python
+   frame_time = 1.0 / 10  # 10 FPS instead of 15
+   ```
+
+2. Lower audio quality:
+   ```python
+   self.rate = 16000  # Lower sample rate
+   self.chunk = 4096  # Larger chunks
+   ```
+
+### If Screen is Slow
+1. Reduce image quality:
+   ```python
+   self.quality = 50  # Lower JPEG quality
+   ```
+
+2. Limit screen size:
+   ```python
+   img.thumbnail((1280, 720), Image.Resampling.LANCZOS)
+   ```
+
+## Common Issues Fixed
+
+❌ **Old Issue**: "Alien voice distortion"  
+✅ **Fixed**: Simple audio conversion without complex processing
+
+❌ **Old Issue**: "No two-way audio"  
+✅ **Fixed**: Proper message routing for microphone audio
+
+❌ **Old Issue**: "Complex audio controls"  
+✅ **Fixed**: Simple call-like buttons (Off/Listen/Talk/Both)
+
+❌ **Old Issue**: "Audio output to wrong device"  
+✅ **Fixed**: Auto-detect speakers instead of microphone
+
+## File Locations
+
+Make sure these files are in your project folder:
+```
+project/
+├── client.py          (Simple Call-Like Audio Client)
+├── server.py          (Updated Server)  
+├── view.html          (Simple Call-Like Viewer)
+├── land.html          (Landing page - keep existing)
+├── allowed.json       (Add your UUID here)
+├── server.crt         (SSL certificate)
+├── server.key         (SSL private key)
+├── requirements.txt   (Python dependencies)
+└── L_sys_log.txt      (Server logs - auto-created)
+```
+
+## Success Indicators
+
+When everything is working correctly, you should see:
+
+**Client Console:**
+```
+✓ Started system audio capture: WASAPI loopback
+✓ Started microphone capture
+✓ Started speaker output: Realtek Audio
+✓ Audio system started successfully
+Connected to server with UUID: YOUR-UUID
+```
+
+**Viewer Interface:**
+```
+Status: Connected
+Audio: Full Call (when in Both Ways mode)
+```
+
+**Server Logs:**
+```
+CLIENT CONNECT - UUID: YOUR-UUID, IP: 192.168.x.x
+VIEWER CONNECT - UUID: YOUR-UUID, IP: 192.168.x.x  
+AUDIO MODE CHANGE - UUID: YOUR-UUID, Mode: both
+```
+
+The audio should now be clear and work in both directions like a normal phone call! 🎉

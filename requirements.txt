@@ -1,8 +1,14 @@
 aiohttp
 aiofiles
 websockets
-pyaudio
+
 mss
 Pillow
-pynput
+opencv-python
+
+PyAudio
 numpy
+
+pynput
+
+psutil
