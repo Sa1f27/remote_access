@@ -358,17 +358,23 @@ class AudioCallClient:
     
     async def connect_to_server(self, server_url):
         """Connect to the server"""
+        print(f"🔗 Attempting connection to: {server_url}")
+        
         ssl_context = ssl.create_default_context()
         ssl_context.check_hostname = False
         ssl_context.verify_mode = ssl.CERT_NONE
         
         try:
+            print("🔐 Creating SSL context...")
+            
             self.websocket = await websockets.connect(
                 server_url,
                 ssl=ssl_context,
                 ping_interval=20,
                 ping_timeout=10
             )
+            
+            print("🌐 WebSocket connected, sending authentication...")
             
             await self.websocket.send(json.dumps({
                 'type': 'audio_client_connect',
@@ -377,10 +383,13 @@ class AudioCallClient:
             }))
             
             print(f"📡 Connected to server with UUID: {self.uuid}")
+            print("✅ Waiting for authentication response...")
             return True
             
         except Exception as e:
             print(f"❌ Connection error: {e}")
+            print(f"❌ Error type: {type(e).__name__}")
+            print(f"❌ Server URL: {server_url}")
             return False
     
     async def handle_messages(self):
