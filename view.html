@@ -645,16 +645,17 @@
                     
                     this.micStream = await navigator.mediaDevices.getUserMedia({
                         audio: {
-                            sampleRate: 16000,
+                            sampleRate: 22050,  // Match client sample rate
                             channelCount: 1,
                             echoCancellation: true,
                             noiseSuppression: true,
-                            autoGainControl: true
+                            autoGainControl: false,  // Disable AGC for better quality
+                            volume: 1.0
                         }
                     });
                     
                     this.audioContext = new (window.AudioContext || window.webkitAudioContext)({
-                        sampleRate: 16000
+                        sampleRate: 22050  // Match client sample rate
                     });
                     
                     const source = this.audioContext.createMediaStreamSource(this.micStream);
@@ -868,8 +869,8 @@
                 view.setUint32(16, 16, true);
                 view.setUint16(20, 1, true); // PCM
                 view.setUint16(22, 1, true); // Channels
-                view.setUint32(24, 16000, true); // Sample rate
-                view.setUint32(28, 32000, true); // Byte rate
+                view.setUint32(24, 22050, true); // Higher sample rate for better quality
+                view.setUint32(28, 44100, true); // Byte rate
                 view.setUint16(32, 2, true); // Block align
                 view.setUint16(34, 16, true); // Bits per sample
                 view.setUint32(36, 0x61746164, true); // "data"

@@ -32,11 +32,11 @@ class AudioOnlyManager:
         self.viewer_audio_queue = queue.Queue()
         self.running = False
         
-        # Audio settings - optimized for voice calls
+        # Better audio settings for voice quality
         self.format = pyaudio.paInt16
         self.channels = 1
-        self.rate = 16000  # Lower rate for voice calls (better for network)
-        self.chunk = 1024
+        self.rate = 22050  # Higher sample rate for better quality
+        self.chunk = 2048  # Larger chunks for smoother audio
         
         # Call modes: "off", "listen", "talk", "both"
         self.call_mode = "off"
@@ -493,6 +493,8 @@ class AudioCallClient:
     
     async def send_audio_updates(self):
         """Send audio to viewer"""
+        print("📡 Audio transmission thread started")
+        
         while self.running and self.websocket:
             try:
                 # Send system audio (Zoom meeting, music, etc.)
@@ -506,7 +508,7 @@ class AudioCallClient:
                         'timestamp': time.time()
                     }))
                 
-                # Send microphone audio (client speaking)
+                # Send microphone audio (client speaking) - FIXED PRIORITY
                 mic_audio = self.audio_manager.get_microphone_audio()
                 if mic_audio:
                     audio_b64 = b64encode(mic_audio).decode('utf-8')
@@ -516,18 +518,19 @@ class AudioCallClient:
                         'audio': audio_b64,
                         'timestamp': time.time()
                     }))
+                    print(f"🎤 Sent microphone audio to viewer (mode: {self.audio_manager.call_mode})")
                 
-                await asyncio.sleep(0.03)  # ~33Hz audio updates
+                await asyncio.sleep(0.02)  # Faster updates for better quality - 50Hz
                 
             except Exception as e:
                 print(f"❌ Audio update error: {e}")
                 break
     
     async def ping_monitor(self):
-        """Monitor connection ping"""
+        """Monitor connection ping with better timing"""
         while self.running and self.websocket:
             try:
-                # Send ping request
+                # Send ping request less frequently to reduce network load
                 ping_time = time.time()
                 await self.websocket.send(json.dumps({
                     'type': 'ping_request',
@@ -535,7 +538,7 @@ class AudioCallClient:
                     'timestamp': ping_time
                 }))
                 
-                await asyncio.sleep(5)  # Ping every 5 seconds
+                await asyncio.sleep(2)  # Ping every 2 seconds instead of 5
                 
             except Exception as e:
                 print(f"❌ Ping error: {e}")
