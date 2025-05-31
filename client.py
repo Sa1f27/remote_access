@@ -176,13 +176,38 @@ class AudioOnlyManager:
             return False
     
     def start_microphone_capture(self):
-        """Start capturing microphone with clean settings"""
-        print("🎤 Starting microphone capture...")
+        """Start capturing microphone"""
+        print("🎤 Requesting microphone access...")
         
         device_id = self.find_microphone_device()
         
         try:
-            # Clean microphone settings - no processing to avoid distortion
+            # Test microphone access first
+            print("🔐 Testing microphone permissions...")
+            test_stream = self.p.open(
+                format=self.format,
+                channels=self.channels,
+                rate=self.rate,
+                input=True,
+                input_device_index=device_id,
+                frames_per_buffer=self.chunk
+            )
+            
+            # Test recording for 1 second to verify it works
+            print("🎤 Testing microphone recording (speak now)...")
+            for i in range(int(self.rate / self.chunk)):
+                try:
+                    data = test_stream.read(self.chunk, exception_on_overflow=False)
+                    audio_level = np.max(np.abs(np.frombuffer(data, dtype=np.int16)))
+                    if audio_level > 500:
+                        print(f"✓ Microphone working! Level: {audio_level}")
+                        break
+                except Exception as e:
+                    print(f"⚠ Microphone test issue: {e}")
+            
+            test_stream.close()
+            
+            # Now open the actual microphone stream
             self.mic_stream = self.p.open(
                 format=self.format,
                 channels=self.channels,
@@ -191,11 +216,36 @@ class AudioOnlyManager:
                 input_device_index=device_id,
                 frames_per_buffer=self.chunk
             )
-            print("✓ Microphone capture started (natural voice, no effects)")
+            print("✓ Microphone capture started successfully")
+            print("🎤 Your voice will be transmitted when call mode allows it")
             return True
             
         except Exception as e:
             print(f"❌ Microphone capture failed: {e}")
+            print("❌ Possible causes:")
+            print("   • Microphone is being used by another application")
+            print("   • Windows privacy settings block microphone access")
+            print("   • Microphone driver issues")
+            print("   • Run as Administrator might be needed")
+            
+            # Check Windows privacy settings
+            try:
+                result = subprocess.run([
+                    'powershell', '-Command',
+                    "Get-WinUserPrivacySetting -SettingType Microphone"
+                ], capture_output=True, text=True, timeout=5)
+                
+                if "Denied" in result.stdout:
+                    print("❌ Windows Privacy: Microphone access is DENIED")
+                    print("🔧 Fix: Settings → Privacy → Microphone → Allow apps to access microphone")
+                elif "Allowed" in result.stdout:
+                    print("✅ Windows Privacy: Microphone access is allowed")
+                else:
+                    print("❓ Could not check Windows microphone privacy settings")
+                    
+            except Exception:
+                print("❓ Could not check Windows privacy settings")
+            
             return False
     
     def start_speaker_output(self):

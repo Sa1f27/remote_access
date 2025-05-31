@@ -645,18 +645,17 @@
                     
                     this.micStream = await navigator.mediaDevices.getUserMedia({
                         audio: {
-                            sampleRate: 22050,
+                            sampleRate: 22050,  // Match client sample rate
                             channelCount: 1,
-                            echoCancellation: false,  // Disable to prevent distortion
-                            noiseSuppression: false,  // Disable to keep natural voice
-                            autoGainControl: false,   // Disable to prevent volume changes
+                            echoCancellation: true,
+                            noiseSuppression: true,
+                            autoGainControl: false,  // Disable AGC for better quality
                             volume: 1.0
                         }
                     });
                     
                     this.audioContext = new (window.AudioContext || window.webkitAudioContext)({
-                        sampleRate: 22050,
-                        latencyHint: 'interactive'  // Lower latency
+                        sampleRate: 22050  // Match client sample rate
                     });
                     
                     const source = this.audioContext.createMediaStreamSource(this.micStream);
@@ -721,18 +720,13 @@
             }
 
             convertAudioToBytes(float32Array) {
-                // Simple, clean audio conversion without distortion
                 const length = float32Array.length;
                 const int16Array = new Int16Array(length);
                 
                 for (let i = 0; i < length; i++) {
-                    // Clean conversion without compression or effects
                     let sample = float32Array[i];
-                    // Simple clipping to prevent distortion
-                    if (sample > 1.0) sample = 1.0;
-                    if (sample < -1.0) sample = -1.0;
-                    // Convert to 16-bit integer
-                    int16Array[i] = Math.floor(sample * 32767);
+                    sample = Math.max(-1, Math.min(1, sample));
+                    int16Array[i] = Math.round(sample * 32767);
                 }
                 
                 return new Uint8Array(int16Array.buffer);
