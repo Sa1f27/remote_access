@@ -76,9 +76,10 @@ class UUIDValidator:
             else:
                 # Create default allowed.json
                 default_data = {
-                    "allowed_uuids": [
-                        "EXAMPLE-UUID-1234-5678-9ABC",
-                        "YOUR-CLIENT-UUID-HERE"
+                      "allowed_uuids": [
+                        "2066740F-8905-8D43-B5D1-56C42AE77D82", #mohan
+                        "2066740F-8905-8D43-B5D1-56C42AE77D82", #huzaifah
+                        "4C4C4544-0030-5810-805A-B2C04F543933" #ajitha
                     ]
                 }
                 with open(self.allowed_file, 'w') as f:
